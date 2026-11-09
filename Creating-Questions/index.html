@@ -1,0 +1,873 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--ART-START-->
+<title>개념 렌즈 탐구질문 생성기</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* 레이아웃: 위→아래 '주제 → 렌즈 카드 → 질문', 넓은 화면에서는 오른쪽에 질문 바구니 */
+:root{
+  --bg:#EEF1F6; --surface:#FFFFFF; --surface-2:#F6F8FB; --line:#DCE1EA;
+  --fg:#1B2233; --muted:#5E687C; --ink-btn:#1B2233; --ink-btn-fg:#FFFFFF;
+  --focus:#3E63DD; --shadow:0 1px 2px rgba(27,34,51,.06),0 6px 18px rgba(27,34,51,.06);
+  --t-fact-bg:#E6E8EC; --t-fact-fg:#454D5C;
+  --t-con-bg:#DCEBFF; --t-con-fg:#0B5CC4;
+  --t-deb-bg:#FFE8D6; --t-deb-fg:#B34A00;
+  --font:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","맑은 고딕","Noto Sans KR",system-ui,sans-serif;
+  --r-lg:22px; --r-md:16px; --r-sm:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11141B; --surface:#1A1E28; --surface-2:#222735; --line:#2E3546;
+    --fg:#E9EDF5; --muted:#A0A9BB; --ink-btn:#E9EDF5; --ink-btn-fg:#11141B;
+    --focus:#8DA4EF; --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.25);
+    --t-fact-bg:#2F3542; --t-fact-fg:#CDD3DE;
+    --t-con-bg:#16304F; --t-con-fg:#8EC2FF;
+    --t-deb-bg:#45280F; --t-deb-fg:#FFB27A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11141B; --surface:#1A1E28; --surface-2:#222735; --line:#2E3546;
+  --fg:#E9EDF5; --muted:#A0A9BB; --ink-btn:#E9EDF5; --ink-btn-fg:#11141B;
+  --focus:#8DA4EF; --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.25);
+  --t-fact-bg:#2F3542; --t-fact-fg:#CDD3DE;
+  --t-con-bg:#16304F; --t-con-fg:#8EC2FF;
+  --t-deb-bg:#45280F; --t-deb-fg:#FFB27A;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:18px;line-height:1.55;word-break:keep-all;overflow-wrap:break-word}
+button{font:inherit;color:inherit;cursor:pointer}
+button:disabled{cursor:not-allowed}
+:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+h1,h2,p{margin:0}
+
+/* 헤더 */
+.top{background:var(--surface);border-bottom:1px solid var(--line)}
+.top-in{max-width:1500px;margin:0 auto;padding-block:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:14px;min-width:0}
+.logo{flex:none;width:46px;height:46px;border-radius:50%;background:conic-gradient(#E5484D 0 14.28%,#F76B15 0 28.57%,#F5B800 0 42.85%,#30A46C 0 57.14%,#0090FF 0 71.42%,#3E63DD 0 85.71%,#8E4EC6 0);position:relative}
+.logo::after{content:"";position:absolute;inset:9px;border-radius:50%;background:var(--surface)}
+h1{font-size:1.35rem;font-weight:800;letter-spacing:-.02em;text-wrap:balance}
+.sub{font-size:.88rem;color:var(--muted)}
+.top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.switch{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:8px 16px 8px 8px;font-size:.92rem;font-weight:700}
+.switch .knob{width:40px;height:24px;border-radius:999px;background:var(--line);position:relative;transition:background .2s}
+.switch .knob::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.switch[aria-pressed="true"] .knob{background:var(--focus)}
+.switch[aria-pressed="true"] .knob::after{transform:translateX(16px)}
+.icon-btn{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--surface-2);font-weight:800;font-size:1.1rem}
+.pill-btn{display:none;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:8px 14px;font-size:.92rem;font-weight:700}
+.count{display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 7px;border-radius:999px;background:var(--ink-btn);color:var(--ink-btn-fg);font-size:.8rem;font-weight:800;font-variant-numeric:tabular-nums}
+
+/* 본문 배치 */
+.app{max-width:1500px;margin:0 auto;padding-block:20px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
+@media (min-width:1100px){
+  .app{grid-template-columns:minmax(0,1fr) 380px;align-items:start}
+  .basket{position:sticky;top:16px;max-height:calc(100vh - 32px);display:flex;flex-direction:column}
+  #basketList{overflow-y:auto}
+}
+@media (max-width:1099px){.pill-btn{display:inline-flex}}
+.main{display:flex;flex-direction:column;gap:20px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:22px}
+.step{display:flex;align-items:center;gap:10px;font-size:1.1rem;font-weight:800}
+.num{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--ink-btn);color:var(--ink-btn-fg);font-size:.9rem;flex:none}
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;margin-bottom:16px}
+.hint{color:var(--muted);font-size:.92rem}
+
+/* 주제 입력 */
+.topic-row{position:relative;margin-top:12px}
+#topic{width:100%;font:inherit;font-size:1.5rem;font-weight:700;padding:14px 84px 14px 18px;border-radius:var(--r-md);border:2px solid var(--line);background:var(--surface-2);color:var(--fg)}
+#topic:focus{outline:none;border-color:var(--focus)}
+#topic::placeholder{color:var(--muted);font-weight:500;font-size:1.1rem}
+.len{position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
+.chips-label{color:var(--muted);font-size:.88rem;margin-right:4px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 16px;font-size:.95rem;font-weight:600}
+.chip:hover{background:var(--surface-2)}
+
+/* 렌즈 카드 */
+.deck{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.deck{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}}
+.lcard{--lt:color-mix(in srgb,var(--lc) 72%,var(--fg));border:0;background:none;padding:0;aspect-ratio:3/4;max-width:100%;perspective:900px;container-type:inline-size;border-radius:18px;transition:transform .15s}
+.lc-inner{position:relative;display:block;width:100%;height:100%;transition:transform .55s cubic-bezier(.3,.7,.3,1.2);transform-style:preserve-3d}
+.lcard.flipped .lc-inner{transform:rotateY(180deg)}
+.lc-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px 8px;text-align:center}
+.lc-front{background:var(--surface);border:2px solid var(--line);box-shadow:inset 0 -8px 0 var(--lc)}
+.lc-back{transform:rotateY(180deg);background:var(--lc);color:var(--li);box-shadow:var(--shadow)}
+.lc-ring{width:min(56px,60cqw);aspect-ratio:1;border-radius:50%;border:5px solid var(--lc);display:grid;place-items:center;color:var(--lt);font-weight:900;font-size:clamp(1rem,22cqw,1.5rem);position:relative}
+.lc-ring::after{content:"";position:absolute;width:28%;height:6px;border-radius:3px;background:var(--lc);right:-22%;bottom:-6%;transform:rotate(45deg)}
+.lc-name{font-weight:800;font-size:clamp(.95rem,17cqw,1.25rem);color:var(--fg)}
+.lc-back .lc-name{color:inherit}
+.lc-en{font-size:clamp(.7rem,11cqw,.85rem);color:var(--muted);letter-spacing:.04em}
+.lc-key{font-size:clamp(.72rem,10cqw,.95rem);line-height:1.35;font-weight:600}
+@container (max-width:104px){.lc-key{display:none}}
+.lcard:hover .lc-front{border-color:var(--lc)}
+.lcard.hot{transform:translateY(-10px)}
+.lcard.hot .lc-front{border-color:var(--lc);background:color-mix(in srgb,var(--lc) 14%,var(--surface))}
+.deck.has-pick .lcard:not(.flipped) .lc-front{opacity:.55}
+.draw-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:18px;border:0;border-radius:var(--r-md);background:var(--ink-btn);color:var(--ink-btn-fg);font-size:1.3rem;font-weight:800;padding:16px}
+.draw-btn:hover:not(:disabled){filter:brightness(1.12)}
+.draw-btn:disabled{opacity:.4}
+.draw-note{text-align:center;color:var(--muted);font-size:.88rem;margin-top:8px}
+
+/* 질문 결과 */
+.banner{display:flex;align-items:center;gap:16px;background:var(--lc);color:var(--li);border-radius:var(--r-md);padding:16px 20px}
+.banner .b-ring{flex:none;width:54px;height:54px;border-radius:50%;border:5px solid currentColor;display:grid;place-items:center;font-weight:900;font-size:1.4rem}
+.b-lens{font-size:.95rem;font-weight:700;opacity:.92}
+.b-lens .en{font-weight:500;opacity:.85;margin-left:4px}
+.b-q{font-size:1.45rem;font-weight:800;line-height:1.3;text-wrap:balance}
+.b-topic{margin-left:auto;flex:none;background:rgba(255,255,255,.22);border-radius:999px;padding:6px 14px;font-weight:700;font-size:.95rem;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:600px){.banner{flex-wrap:wrap}.b-topic{margin-left:0;max-width:100%}.b-q{font-size:1.2rem}}
+.qgroups{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:18px}
+.qgroup{display:flex;flex-direction:column;gap:10px;min-width:0}
+.qcard{display:flex;flex-direction:column;gap:12px;justify-content:space-between;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-md);padding:16px;flex:1}
+.qtext{font-size:1.12rem;font-weight:700;line-height:1.45}
+.add-btn{align-self:flex-end;border:2px solid var(--fg);background:transparent;border-radius:999px;padding:5px 16px;font-weight:800;font-size:.92rem}
+.add-btn:hover{background:var(--fg);color:var(--surface)}
+.add-btn.done{border-color:transparent;background:var(--line);color:var(--muted)}
+.more-row{display:flex;justify-content:center;margin-top:18px}
+.more-btn{border:2px solid var(--line);background:var(--surface);border-radius:999px;padding:10px 24px;font-weight:800;font-size:1rem}
+.more-btn:hover{border-color:var(--fg)}
+.placeholder{display:grid;gap:14px;justify-items:center;text-align:center;padding:24px 8px;color:var(--muted)}
+.placeholder strong{color:var(--fg);font-size:1.15rem}
+.flow{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;font-size:.92rem}
+.flow span{background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:4px 12px}
+
+/* 질문 유형 배지 + 말풍선 */
+.tbadge{position:relative;display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:4px 12px;font-size:.88rem;font-weight:800;align-self:flex-start}
+.tbadge .qm{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:currentColor;font-size:.7rem}
+.tbadge .qm b{color:var(--surface);font-weight:900}
+.t-factual{background:var(--t-fact-bg);color:var(--t-fact-fg)}
+.t-conceptual{background:var(--t-con-bg);color:var(--t-con-fg)}
+.t-debatable{background:var(--t-deb-bg);color:var(--t-deb-fg)}
+.tbadge[data-tip]::after{content:attr(data-tip);position:absolute;left:0;top:calc(100% + 8px);z-index:20;width:max-content;max-width:240px;background:var(--fg);color:var(--surface);padding:8px 12px;border-radius:10px;font-size:.85rem;font-weight:600;line-height:1.4;opacity:0;pointer-events:none;transform:translateY(-4px);transition:opacity .15s,transform .15s;white-space:normal}
+.tbadge[data-tip]:hover::after,.tbadge[data-tip]:focus-visible::after,.tbadge[data-tip].show::after{opacity:1;transform:none}
+
+/* 전체 렌즈 보기 */
+.all-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.all-head h2{font-size:1.25rem;font-weight:800}
+.all-head h2 em{font-style:normal;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:2px 10px;margin:0 2px}
+.all-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.lblock{border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;background:var(--surface-2);min-width:0}
+.lblock-head{background:var(--lc);color:var(--li);padding:10px 14px}
+.lblock-head .n{font-weight:800}
+.lblock-head .n span{font-weight:500;opacity:.85;margin-left:4px;font-size:.85rem}
+.lblock-head .k{font-size:.92rem;font-weight:600;opacity:.95}
+.lrow{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 10px;align-items:start;padding:12px 14px;border-top:1px solid var(--line)}
+.lrow:first-of-type{border-top:0}
+.lrow .qtext{font-size:1rem}
+.lrow .add-btn{grid-column:2;padding:3px 12px;font-size:.85rem}
+
+/* 바구니 */
+.basket{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow);min-width:0}
+.basket-head h2{display:flex;align-items:center;gap:10px;font-size:1.15rem;font-weight:800}
+#basketList{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:10px}
+.bitem{display:grid;grid-template-columns:8px minmax(0,1fr);gap:0 12px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:12px 12px 12px 0;overflow:hidden}
+.bitem::before{content:"";grid-row:1 / span 3;background:var(--lc);border-radius:0 6px 6px 0}
+.bmeta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:.8rem}
+.lens-tag{font-weight:800;color:var(--lt)}
+.bitem{--lt:color-mix(in srgb,var(--lc) 72%,var(--fg))}
+.mini{border-radius:999px;padding:1px 8px;font-weight:700}
+.btopic{color:var(--muted)}
+.btext{font-size:1rem;font-weight:700;margin-top:4px}
+.bedit{width:100%;font:inherit;font-size:1rem;font-weight:700;margin-top:4px;padding:6px 8px;border-radius:8px;border:2px solid var(--focus);background:var(--surface);color:var(--fg)}
+.bbtns{display:flex;gap:6px;justify-content:flex-end;margin-top:6px}
+.bbtns button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:2px 12px;font-size:.82rem;font-weight:700}
+.bbtns button:hover{border-color:var(--fg)}
+.empty{color:var(--muted);font-size:.95rem;margin-top:14px;padding:18px;border:2px dashed var(--line);border-radius:var(--r-md);text-align:center}
+.basket-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
+.basket-actions button{border:0;border-radius:12px;padding:12px;font-weight:800;font-size:1rem;background:var(--ink-btn);color:var(--ink-btn-fg)}
+.basket-actions button.ghost{grid-column:1 / -1;background:transparent;border:1px solid var(--line);color:var(--muted);font-size:.9rem;padding:8px}
+.basket-actions button.ghost.warn{border-color:#E5484D;color:#E5484D}
+.basket-actions button:disabled{opacity:.35}
+
+/* 토스트, 모달 */
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--fg);color:var(--surface);padding:12px 22px;border-radius:999px;font-weight:700;font-size:1rem;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:60;max-width:calc(100% - 32px);text-align:center}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.modal{position:fixed;inset:0;z-index:50;background:rgba(10,14,22,.5);display:grid;place-items:center;padding:16px}
+.modal-box{background:var(--surface);color:var(--fg);border-radius:var(--r-lg);padding:24px;width:min(560px,100%);max-height:calc(100vh - 32px);overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal-box h2{font-size:1.25rem;font-weight:800;margin-bottom:12px}
+.modal-box ol{margin:0 0 14px;padding-left:1.3em;display:grid;gap:6px}
+.modal-box .types{display:grid;gap:8px;margin-bottom:16px}
+.modal-box .types div{display:flex;gap:10px;align-items:baseline;font-size:.95rem}
+.modal-box .types .tbadge{flex:none}
+.modal-box p{color:var(--muted);font-size:.95rem;margin-bottom:12px}
+.modal-box textarea{width:100%;min-height:220px;font:inherit;font-size:.95rem;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);resize:vertical}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.modal-actions button{border:0;border-radius:12px;padding:10px 20px;font-weight:800;background:var(--ink-btn);color:var(--ink-btn-fg)}
+.modal-actions button.ghost{background:transparent;border:1px solid var(--line);color:var(--fg)}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}
+}
+</style>
+<!--HEAD-END-->
+</head>
+<body>
+<!--BODY-START-->
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"></span>
+      <div>
+        <h1>개념 렌즈 탐구질문 생성기</h1>
+        <p class="sub">같은 주제도 어떤 렌즈로 보느냐에 따라 질문이 달라져요</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="allToggle" class="switch" type="button" aria-pressed="false"><span class="knob" aria-hidden="true"></span>전체 렌즈 보기</button>
+      <button id="basketJump" class="pill-btn" type="button">바구니 <span class="count" id="countTop">0</span></button>
+      <button id="helpBtn" class="icon-btn" type="button" aria-label="도움말">?</button>
+    </div>
+  </div>
+</header>
+
+<div class="app">
+  <main class="main">
+    <section class="panel">
+      <label for="topic" class="step"><span class="num">1</span>탐구 주제</label>
+      <div class="topic-row">
+        <input id="topic" type="text" maxlength="20" placeholder="예: 물, 우리 마을 시장, 플라스틱" autocomplete="off">
+        <span class="len" id="topicLen">0/20</span>
+      </div>
+      <div class="chips" id="chips">
+        <span class="chips-label">예시</span>
+        <button class="chip" type="button" data-topic="물">물</button>
+        <button class="chip" type="button" data-topic="우리 마을">우리 마을</button>
+        <button class="chip" type="button" data-topic="놀이">놀이</button>
+        <button class="chip" type="button" data-topic="플라스틱">플라스틱</button>
+      </div>
+    </section>
+
+    <section class="panel" id="lensSec">
+      <div class="sec-head">
+        <h2 class="step"><span class="num">2</span>렌즈 고르기</h2>
+        <p class="hint">뽑기를 누르거나 카드를 직접 눌러요</p>
+      </div>
+      <div class="deck" id="deck"></div>
+      <button id="drawBtn" class="draw-btn" type="button">렌즈 뽑기</button>
+      <p class="draw-note" id="drawNote" hidden>주제를 먼저 써야 뽑을 수 있어요</p>
+    </section>
+
+    <section class="panel" id="result" aria-live="polite"></section>
+    <section class="panel" id="allView" hidden></section>
+  </main>
+
+  <aside class="basket" id="basket" aria-label="내 질문 바구니">
+    <div class="basket-head"><h2>내 질문 바구니 <span class="count" id="countSide">0</span></h2></div>
+    <ul id="basketList"></ul>
+    <p class="empty" id="basketEmpty">마음에 드는 질문의 ‘담기’를 눌러 모아 보세요.</p>
+    <div class="basket-actions">
+      <button id="copyBtn" type="button">복사</button>
+      <button id="saveBtn" type="button">.txt 저장</button>
+      <button id="clearBtn" class="ghost" type="button">바구니 비우기</button>
+    </div>
+  </aside>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="modal" id="helpModal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <h2 id="helpTitle">이렇게 써요</h2>
+    <ol>
+      <li>탐구 주제를 쓰고 <b>렌즈 뽑기</b>를 누르거나 카드를 직접 골라요.</li>
+      <li>렌즈로 만든 질문 중 마음에 드는 것을 <b>담기</b>로 바구니에 모아요.</li>
+      <li>다른 렌즈로 더 모은 뒤 <b>복사</b>하거나 <b>.txt 저장</b>을 눌러요.</li>
+    </ol>
+    <div class="types" id="helpTypes"></div>
+    <p>교사용: 오른쪽 위 ‘전체 렌즈 보기’를 켜면 한 주제를 7개 렌즈로 한꺼번에 볼 수 있어요.</p>
+    <div class="modal-actions"><button type="button" data-close>알겠어요</button></div>
+  </div>
+</div>
+
+<div class="modal" id="textModal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="textTitle">
+    <h2 id="textTitle">질문 모음</h2>
+    <p id="textMsg"></p>
+    <label for="textOut" class="sr" hidden>질문 모음 텍스트</label>
+    <textarea id="textOut" readonly></textarea>
+    <div class="modal-actions">
+      <button type="button" class="ghost" data-close>닫기</button>
+      <button type="button" id="textCopy">전체 복사</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ==========================================================
+   ✏️ 선생님이 고치기 쉬운 데이터 영역
+   - {주제}        : 입력한 주제가 그대로 들어가요
+   - {주제:은} {주제:이} {주제:을} {주제:와}
+                   : 받침에 따라 은/는, 이/가, 을/를, 과/와로 바뀌어요
+   ========================================================== */
+const LENSES = [
+  { id:"form", name:"형태", en:"Form", color:"#E5484D", ink:"#FFFFFF",
+    keyQuestion:"그것은 어떤 모습인가?",
+    templates:{
+      factual:[
+        "{주제}의 특징은 무엇인가?",
+        "{주제:은} 어떤 부분들로 이루어져 있는가?",
+        "{주제:은} 어떤 모양과 크기를 가지고 있는가?",
+        "{주제:을} 다른 것과 구별하게 해 주는 점은 무엇인가?"
+      ],
+      conceptual:[
+        "{주제}의 생김새는 왜 지금과 같을까?",
+        "{주제}의 모습과 쓰임에는 어떤 관계가 있을까?",
+        "{주제:와} 비슷한 것들은 왜 닮은 모습을 가질까?",
+        "{주제}의 모습에서 어떤 패턴을 찾을 수 있을까?"
+      ],
+      debatable:[
+        "{주제:을} 다른 모습으로 바꾸면 더 좋아질까?",
+        "{주제}의 겉모습과 속모습 중 무엇이 더 중요할까?",
+        "{주제:은} 지금 모습 그대로 지켜야 할까?",
+        "보기 좋은 {주제:와} 쓰기 좋은 {주제} 중 무엇을 골라야 할까?"
+      ]
+    }
+  },
+  { id:"function", name:"기능", en:"Function", color:"#F76B15", ink:"#FFFFFF",
+    keyQuestion:"그것은 어떻게 작동하는가?",
+    templates:{
+      factual:[
+        "{주제:은} 어떤 역할을 하는가?",
+        "{주제:은} 어떤 순서로 작동하는가?",
+        "{주제:을} 이루는 각 부분은 무슨 일을 하는가?",
+        "사람들은 {주제:을} 어디에 쓰는가?"
+      ],
+      conceptual:[
+        "{주제}의 구조와 역할은 어떤 관계가 있을까?",
+        "{주제}의 한 부분이 멈추면 전체는 어떻게 될까?",
+        "{주제:이} 제 역할을 잘하려면 무엇이 필요할까?",
+        "{주제:와} 같은 역할을 하는 것들에는 어떤 공통점이 있을까?"
+      ],
+      debatable:[
+        "{주제:이} 없다면 우리 생활은 어떻게 될까?",
+        "{주제}의 역할 중 가장 중요한 것은 무엇일까?",
+        "{주제:은} 지금보다 더 많은 일을 해야 할까?",
+        "{주제:을} 더 편리하게 만드는 것은 언제나 좋은 일일까?"
+      ]
+    }
+  },
+  { id:"causation", name:"원인", en:"Causation", color:"#F5B800", ink:"#2A2000",
+    keyQuestion:"왜 그렇게 되었는가?",
+    templates:{
+      factual:[
+        "{주제:이} 생긴 까닭은 무엇인가?",
+        "{주제:은} 무엇 때문에 지금과 같아졌는가?",
+        "{주제:이} 일으키는 결과에는 무엇이 있는가?",
+        "{주제}에 영향을 주는 것에는 무엇이 있는가?"
+      ],
+      conceptual:[
+        "원인이 달라지면 {주제}의 결과도 달라질까?",
+        "{주제}의 원인과 결과는 어떻게 이어져 있을까?",
+        "작은 원인이 {주제}에 큰 결과를 가져올 수 있을까?",
+        "{주제}에서 한 가지 결과에 여러 원인이 있을 수 있을까?"
+      ],
+      debatable:[
+        "{주제}의 문제는 누구 때문이라고 할 수 있을까?",
+        "{주제}의 원인을 모두 없애는 것이 옳을까?",
+        "{주제}의 결과를 미리 막을 수 있었을까?",
+        "{주제}의 원인 중 가장 큰 책임이 있는 것은 무엇일까?"
+      ]
+    }
+  },
+  { id:"change", name:"변화", en:"Change", color:"#30A46C", ink:"#FFFFFF",
+    keyQuestion:"그것은 어떻게 변하고 있는가?",
+    templates:{
+      factual:[
+        "옛날의 {주제:은} 어떠했는가?",
+        "{주제:은} 시간이 지나며 어떻게 달라졌는가?",
+        "{주제:이} 크게 바뀐 때는 언제였는가?",
+        "장소에 따라 {주제:은} 어떻게 다른가?"
+      ],
+      conceptual:[
+        "무엇이 {주제:을} 변하게 만들까?",
+        "{주제}의 변화는 다른 것의 변화로 이어질까?",
+        "{주제}에도 변하지 않는 모습이 있을까?",
+        "{주제:은} 앞으로 어떻게 변해 갈까?"
+      ],
+      debatable:[
+        "{주제}의 변화는 모두에게 좋은 일일까?",
+        "{주제}의 옛 모습을 지켜야 할까, 새롭게 바꿔야 할까?",
+        "{주제:이} 너무 빨리 변하는 것은 문제일까?",
+        "{주제}의 변화를 사람이 막아야 할 때가 있을까?"
+      ]
+    }
+  },
+  { id:"connection", name:"연결", en:"Connection", color:"#0090FF", ink:"#FFFFFF",
+    keyQuestion:"다른 것과 어떻게 연결되어 있는가?",
+    templates:{
+      factual:[
+        "{주제:와} 관련된 것에는 무엇이 있는가?",
+        "{주제:은} 우리 생활과 어떻게 이어져 있는가?",
+        "{주제:와} 함께 쓰이거나 함께 있는 것은 무엇인가?",
+        "{주제:와} 관계있는 사람들은 누구인가?"
+      ],
+      conceptual:[
+        "{주제:이} 바뀌면 연결된 것들은 어떻게 될까?",
+        "{주제:와} 우리는 서로 어떤 영향을 주고받을까?",
+        "{주제:은} 멀리 있는 것과도 연결될 수 있을까?",
+        "{주제}의 연결이 끊어지면 어떤 일이 생길까?"
+      ],
+      debatable:[
+        "우리는 {주제:와} 더 가까워져야 할까?",
+        "{주제:와} 연결된 것 중 가장 중요한 것은 무엇일까?",
+        "{주제}의 연결이 늘어나는 것은 좋은 일일까?",
+        "{주제:을} 다른 것과 떼어 놓고 생각해도 될까?"
+      ]
+    }
+  },
+  { id:"perspective", name:"관점", en:"Perspective", color:"#3E63DD", ink:"#FFFFFF",
+    keyQuestion:"다른 사람들은 어떻게 생각하는가?",
+    templates:{
+      factual:[
+        "사람들은 {주제:을} 어떻게 생각하는가?",
+        "어린이와 어른은 {주제:을} 어떻게 다르게 보는가?",
+        "{주제}에 대한 서로 다른 의견에는 무엇이 있는가?",
+        "다른 나라 사람들은 {주제:을} 어떻게 여기는가?"
+      ],
+      conceptual:[
+        "사람마다 {주제:을} 다르게 보는 까닭은 무엇일까?",
+        "경험이 달라지면 {주제}에 대한 생각도 달라질까?",
+        "{주제:을} 다른 사람의 눈으로 보면 무엇이 새롭게 보일까?",
+        "{주제}에 대한 생각은 시간이 지나면 달라질까?"
+      ],
+      debatable:[
+        "누구의 관점이 {주제:을} 결정해야 할까?",
+        "{주제}에 대한 여러 의견 중 옳은 것이 있을까?",
+        "{주제}에 대해 모두가 같은 생각을 가져야 할까?",
+        "{주제}에 대해 결정할 때 어린이의 의견도 들어야 할까?"
+      ]
+    }
+  },
+  { id:"responsibility", name:"책임", en:"Responsibility", color:"#8E4EC6", ink:"#FFFFFF",
+    keyQuestion:"우리의 책임은 무엇인가?",
+    templates:{
+      factual:[
+        "{주제:을} 위해 사람들이 하는 일은 무엇인가?",
+        "{주제:을} 돌보는 사람이나 기관은 누구인가?",
+        "{주제:을} 지키기 위한 약속이나 규칙에는 무엇이 있는가?",
+        "우리 학교와 마을에서는 {주제:을} 위해 무엇을 하는가?"
+      ],
+      conceptual:[
+        "우리의 선택은 {주제}에 어떤 영향을 줄까?",
+        "{주제:을} 아는 것과 행동하는 것은 어떻게 이어질까?",
+        "작은 행동이 {주제:을} 바꿀 수 있을까?",
+        "{주제}에 대한 책임은 왜 함께 나누어야 할까?"
+      ],
+      debatable:[
+        "{주제:을} 지키는 것은 누구의 책임일까?",
+        "{주제:을} 위해 나의 불편을 참아야 할까?",
+        "{주제:을} 위한 규칙을 어기면 벌을 받아야 할까?",
+        "{주제}에 대한 책임은 어른과 어린이가 똑같이 져야 할까?"
+      ]
+    }
+  }
+];
+
+const TYPES = [
+  { id:"factual",    name:"사실적", desc:"찾아보면 답이 있는 질문" },
+  { id:"conceptual", name:"개념적", desc:"여러 상황에 두루 통하는 큰 생각을 묻는 질문" },
+  { id:"debatable",  name:"논쟁적", desc:"사람마다 답이 다를 수 있어 토의가 필요한 질문" }
+];
+/* ================= 데이터 영역 끝 ================= */
+
+const STORE_KEY = "conceptLensQuestionMaker.v1";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const reduceMotion = (() => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch(e) { return false; } })();
+const inFrame = (() => { try { return window.self !== window.top; } catch(e) { return true; } })();
+
+/* ---------- 조사 처리 ---------- */
+const JOSA = { "은":["은","는"], "는":["은","는"], "이":["이","가"], "가":["이","가"], "을":["을","를"], "를":["을","를"], "과":["과","와"], "와":["과","와"] };
+function hasBatchim(word){
+  const w = word.replace(/[\s.,!?~)\]"'”’]+$/,"");
+  if(!w) return null;
+  const ch = w[w.length-1], code = ch.charCodeAt(0);
+  if(code >= 0xAC00 && code <= 0xD7A3) return (code - 0xAC00) % 28 !== 0;
+  if(/[0-9]/.test(ch)) return "013678".includes(ch);
+  return null;
+}
+function fill(tpl, topic){
+  return tpl.replace(/\{주제(?::(은|는|이|가|을|를|과|와))?\}/g, (m, j) => {
+    if(!j) return topic;
+    const b = hasBatchim(topic), p = JOSA[j];
+    return topic + (b === null ? p[0] + "(" + p[1] + ")" : (b ? p[0] : p[1]));
+  });
+}
+
+/* ---------- 상태 ---------- */
+const state = { topic:"", lensId:null, picks:{}, basket:[], allView:false, allPicks:{}, drawing:false };
+const getLens = (id) => LENSES.find(l => l.id === id);
+
+function load(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw){
+      const d = JSON.parse(raw);
+      if(typeof d.topic === "string") state.topic = d.topic.slice(0,20);
+      if(Array.isArray(d.basket)) state.basket = d.basket.filter(b => b && typeof b.text === "string");
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+function save(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify({ topic:state.topic, basket:state.basket })); }catch(e){}
+}
+
+function shuffle(a){ a = a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function pickTwo(len, current){
+  const idx = [...Array(len).keys()];
+  const fresh = shuffle(idx.filter(i => !(current||[]).includes(i)));
+  const old = shuffle(idx.filter(i => (current||[]).includes(i)));
+  return fresh.concat(old).slice(0, Math.min(2, len));
+}
+function newPicks(lens, keep){
+  const p = {};
+  TYPES.forEach(t => { p[t.id] = pickTwo(lens.templates[t.id].length, keep ? state.picks[t.id] : null); });
+  return p;
+}
+function newAllPicks(){
+  const p = {};
+  LENSES.forEach(l => { p[l.id] = {}; TYPES.forEach(t => { p[l.id][t.id] = Math.floor(Math.random()*l.templates[t.id].length); }); });
+  return p;
+}
+
+/* ---------- 렌더링 ---------- */
+function badge(type, small){
+  return `<button type="button" class="tbadge t-${type.id}" data-tip="${esc(type.desc)}" aria-label="${type.name} 질문: ${esc(type.desc)}">${type.name} 질문<span class="qm" aria-hidden="true"><b>?</b></span></button>`;
+}
+const inBasket = (text) => state.basket.some(b => b.text === text);
+
+function addBtn(text, lens, type){
+  const done = inBasket(text);
+  return `<button type="button" class="add-btn${done ? " done" : ""}" data-add="${esc(text)}" data-lens="${lens.id}" data-type="${type.id}">${done ? "담았어요 ✓" : "담기"}</button>`;
+}
+
+function renderDeck(){
+  $("#deck").innerHTML = LENSES.map(l => `
+    <button type="button" class="lcard" data-lens="${l.id}" aria-pressed="false" aria-label="${l.name} 렌즈 (${l.en})" style="--lc:${l.color};--li:${l.ink}">
+      <span class="lc-inner">
+        <span class="lc-face lc-front">
+          <span class="lc-ring" aria-hidden="true">${l.name[0]}</span>
+          <span class="lc-name">${l.name}</span>
+          <span class="lc-en">${l.en}</span>
+        </span>
+        <span class="lc-face lc-back" aria-hidden="true">
+          <span class="lc-name">${l.name}</span>
+          <span class="lc-key">${l.keyQuestion}</span>
+        </span>
+      </span>
+    </button>`).join("");
+}
+function syncDeck(){
+  document.querySelectorAll(".lcard").forEach(c => {
+    const on = c.dataset.lens === state.lensId;
+    c.classList.toggle("flipped", on);
+    c.setAttribute("aria-pressed", on ? "true" : "false");
+  });
+  $("#deck").classList.toggle("has-pick", !!state.lensId);
+}
+
+function renderResult(){
+  const el = $("#result");
+  const lens = getLens(state.lensId);
+  const t = state.topic.trim();
+  if(!lens){
+    el.innerHTML = `<div class="placeholder">
+      <strong>렌즈를 고르면 여기에 탐구 질문이 나타나요</strong>
+      <div class="flow"><span>주제 쓰기</span><span>→</span><span>렌즈 뽑기</span><span>→</span><span>질문 보기</span><span>→</span><span>바구니에 담기</span></div>
+    </div>`;
+    return;
+  }
+  if(!t){
+    el.innerHTML = `<div class="placeholder"><strong>주제를 먼저 써 주세요</strong><span>위 칸에 주제를 쓰면 ${lens.name} 렌즈 질문이 바로 만들어져요.</span></div>`;
+    return;
+  }
+  el.style.setProperty("--lc", lens.color);
+  el.style.setProperty("--li", lens.ink);
+  el.innerHTML = `
+    <div class="banner">
+      <span class="b-ring" aria-hidden="true">${lens.name[0]}</span>
+      <div><p class="b-lens">${lens.name} 렌즈<span class="en">${lens.en}</span></p><p class="b-q">${lens.keyQuestion}</p></div>
+      <span class="b-topic" title="${esc(t)}">주제: ${esc(t)}</span>
+    </div>
+    <div class="qgroups">
+      ${TYPES.map(type => `
+        <div class="qgroup">
+          ${badge(type)}
+          ${state.picks[type.id].map(i => {
+            const q = fill(lens.templates[type.id][i], t);
+            return `<article class="qcard"><p class="qtext">${esc(q)}</p>${addBtn(q, lens, type)}</article>`;
+          }).join("")}
+        </div>`).join("")}
+    </div>
+    <div class="more-row"><button type="button" class="more-btn" id="moreBtn">다른 질문 보기</button></div>`;
+}
+
+function renderAll(){
+  const el = $("#allView");
+  const t = state.topic.trim();
+  if(!t){
+    el.innerHTML = `<div class="placeholder"><strong>주제를 먼저 써 주세요</strong><span>주제를 쓰면 7개 렌즈의 질문을 한 화면에 펼쳐 보여 줘요.</span></div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div class="all-head">
+      <h2><em>${esc(t)}</em> 7개 렌즈로 한눈에 보기</h2>
+      <button type="button" class="more-btn" id="reshuffleAll">다시 섞기</button>
+    </div>
+    <div class="all-grid">
+      ${LENSES.map(l => `
+        <div class="lblock" style="--lc:${l.color};--li:${l.ink}">
+          <div class="lblock-head"><p class="n">${l.name}<span>${l.en}</span></p><p class="k">${l.keyQuestion}</p></div>
+          ${TYPES.map(type => {
+            const q = fill(l.templates[type.id][state.allPicks[l.id][type.id]], t);
+            return `<div class="lrow">${badge(type)}<p class="qtext">${esc(q)}</p>${addBtn(q, l, type)}</div>`;
+          }).join("")}
+        </div>`).join("")}
+    </div>`;
+}
+
+function renderBasket(){
+  const list = $("#basketList");
+  const n = state.basket.length;
+  $("#countTop").textContent = n;
+  $("#countSide").textContent = n;
+  $("#basketEmpty").hidden = n > 0;
+  $("#copyBtn").disabled = n === 0;
+  $("#saveBtn").disabled = n === 0;
+  $("#clearBtn").disabled = n === 0;
+  list.innerHTML = state.basket.map(b => {
+    const l = getLens(b.lens) || LENSES[0];
+    const ty = TYPES.find(x => x.id === b.type) || TYPES[0];
+    return `<li class="bitem" style="--lc:${l.color}" data-id="${b.id}">
+      <div class="bmeta"><span class="lens-tag">${l.name}</span><span class="mini t-${ty.id}">${ty.name}</span>${b.topic ? `<span class="btopic">· ${esc(b.topic)}</span>` : ""}</div>
+      ${b.editing ? `<input class="bedit" id="edit-${b.id}" value="${esc(b.text)}" aria-label="질문 고치기">` : `<p class="btext">${esc(b.text)}</p>`}
+      <div class="bbtns">
+        <button type="button" data-edit="${b.id}">${b.editing ? "저장" : "고치기"}</button>
+        <button type="button" data-del="${b.id}" aria-label="이 질문 삭제">삭제</button>
+      </div>
+    </li>`;
+  }).join("");
+}
+
+function renderView(){
+  $("#lensSec").hidden = state.allView;
+  $("#result").hidden = state.allView;
+  $("#allView").hidden = !state.allView;
+  $("#allToggle").setAttribute("aria-pressed", state.allView ? "true" : "false");
+  if(state.allView) renderAll(); else renderResult();
+}
+function syncDraw(){
+  const empty = !state.topic.trim();
+  $("#drawBtn").disabled = empty || state.drawing;
+  $("#drawNote").hidden = !empty;
+  $("#topicLen").textContent = state.topic.length + "/20";
+}
+
+/* ---------- 동작 ---------- */
+let toastTimer;
+function toast(msg){
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("on"), 1800);
+}
+
+function selectLens(id){
+  const lens = getLens(id);
+  if(!lens) return;
+  state.lensId = id;
+  state.picks = newPicks(lens, false);
+  syncDeck();
+  renderResult();
+}
+
+function draw(){
+  if(state.drawing || !state.topic.trim()) return;
+  const options = LENSES.filter(l => l.id !== state.lensId);
+  const target = options[Math.floor(Math.random() * options.length)].id;
+  if(reduceMotion){ selectLens(target); return; }
+  state.drawing = true; syncDraw();
+  state.lensId = null; syncDeck();
+  const cards = [...document.querySelectorAll(".lcard")];
+  let step = 0, last = -1;
+  const total = 10;
+  const timer = setInterval(() => {
+    cards.forEach(c => c.classList.remove("hot"));
+    if(step >= total){
+      clearInterval(timer);
+      state.drawing = false;
+      selectLens(target);
+      syncDraw();
+      return;
+    }
+    let i; do { i = Math.floor(Math.random()*cards.length); } while(i === last);
+    last = i;
+    cards[i].classList.add("hot");
+    step++;
+  }, 80);
+}
+
+function addToBasket(text, lens, type){
+  if(inBasket(text)){ toast("이미 바구니에 있어요"); return; }
+  state.basket.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), text, lens, type, topic: state.topic.trim() });
+  save(); renderBasket(); renderView();
+  toast("바구니에 담았어요");
+}
+
+function exportText(){
+  const d = new Date();
+  const date = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,"0")}.${String(d.getDate()).padStart(2,"0")}`;
+  const lines = [`개념 렌즈 탐구질문 모음 (${date})`, ""];
+  state.basket.forEach((b, i) => {
+    const l = getLens(b.lens), ty = TYPES.find(x => x.id === b.type);
+    lines.push(`${i+1}. [${l ? l.name : ""} · ${ty ? ty.name : ""}${b.topic ? " · " + b.topic : ""}] ${b.text}`);
+  });
+  return lines.join("\r\n");
+}
+
+function openText(msg){
+  $("#textMsg").textContent = msg;
+  $("#textOut").value = exportText();
+  openModal("#textModal");
+}
+function fallbackCopy(text){
+  try{
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.setAttribute("readonly",""); ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  }catch(e){ return false; }
+}
+function copyText(text){
+  const done = () => toast("복사했어요. 원하는 곳에 붙여 넣으세요");
+  const fail = () => { if(fallbackCopy(text)) done(); else openText("자동 복사가 막혀 있어요. 아래 글을 직접 선택해서 복사해 주세요."); };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(fail);
+  } else fail();
+}
+function downloadTxt(){
+  if(inFrame){
+    openText("공유 링크 화면에서는 파일 저장이 막혀 있어요. 아래 글을 복사해서 쓰거나, 내려받은 index.html 파일로 실행하면 .txt로 저장할 수 있어요.");
+    return;
+  }
+  try{
+    const blob = new Blob(["﻿" + exportText()], { type:"text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const d = new Date();
+    a.href = url;
+    a.download = `탐구질문_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}.txt`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast(".txt 파일로 저장했어요");
+  }catch(e){
+    openText("파일 저장이 되지 않았어요. 아래 글을 복사해서 써 주세요.");
+  }
+}
+
+let lastFocus = null;
+function openModal(sel){ lastFocus = document.activeElement; $(sel).hidden = false; const b = $(sel).querySelector("button"); if(b) b.focus(); }
+function closeModals(){ document.querySelectorAll(".modal").forEach(m => m.hidden = true); if(lastFocus) lastFocus.focus(); }
+
+let clearArmed = false, clearTimer;
+function clearBasket(){
+  const btn = $("#clearBtn");
+  if(!clearArmed){
+    clearArmed = true; btn.textContent = "한 번 더 누르면 모두 지워져요"; btn.classList.add("warn");
+    clearTimer = setTimeout(resetClear, 3000);
+    return;
+  }
+  resetClear();
+  state.basket = []; save(); renderBasket(); renderView();
+  toast("바구니를 비웠어요");
+}
+function resetClear(){ clearArmed = false; clearTimeout(clearTimer); const b = $("#clearBtn"); b.textContent = "바구니 비우기"; b.classList.remove("warn"); }
+
+function commitEdit(id){
+  const item = state.basket.find(b => b.id === id);
+  if(!item) return;
+  const input = document.getElementById("edit-" + id);
+  if(input){ const v = input.value.trim(); if(v) item.text = v; }
+  item.editing = false;
+  save(); renderBasket(); renderView();
+}
+
+/* ---------- 이벤트 ---------- */
+$("#topic").addEventListener("input", (e) => {
+  state.topic = e.target.value.slice(0,20);
+  save(); syncDraw(); renderView();
+});
+$("#chips").addEventListener("click", (e) => {
+  const c = e.target.closest("[data-topic]"); if(!c) return;
+  state.topic = c.dataset.topic; $("#topic").value = state.topic;
+  save(); syncDraw(); renderView();
+});
+$("#deck").addEventListener("click", (e) => {
+  const c = e.target.closest(".lcard"); if(!c || state.drawing) return;
+  selectLens(c.dataset.lens);
+});
+$("#drawBtn").addEventListener("click", draw);
+$("#allToggle").addEventListener("click", () => {
+  state.allView = !state.allView;
+  if(state.allView) state.allPicks = newAllPicks();
+  renderView();
+});
+$("#helpBtn").addEventListener("click", () => openModal("#helpModal"));
+$("#basketJump").addEventListener("click", () => $("#basket").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block:"start" }));
+
+document.addEventListener("click", (e) => {
+  const tb = e.target.closest(".tbadge");
+  document.querySelectorAll(".tbadge.show").forEach(b => { if(b !== tb) b.classList.remove("show"); });
+  if(tb){ tb.classList.toggle("show"); return; }
+
+  const add = e.target.closest("[data-add]");
+  if(add){ addToBasket(add.dataset.add, add.dataset.lens, add.dataset.type); return; }
+
+  if(e.target.closest("#moreBtn")){
+    const lens = getLens(state.lensId); if(!lens) return;
+    state.picks = newPicks(lens, true); renderResult(); toast("새 질문을 가져왔어요"); return;
+  }
+  if(e.target.closest("#reshuffleAll")){ state.allPicks = newAllPicks(); renderAll(); return; }
+
+  const del = e.target.closest("[data-del]");
+  if(del){ state.basket = state.basket.filter(b => b.id !== del.dataset.del); save(); renderBasket(); renderView(); toast("질문을 뺐어요"); return; }
+
+  const ed = e.target.closest("[data-edit]");
+  if(ed){
+    const item = state.basket.find(b => b.id === ed.dataset.edit); if(!item) return;
+    if(item.editing){ commitEdit(item.id); }
+    else { item.editing = true; renderBasket(); const inp = document.getElementById("edit-" + item.id); if(inp){ inp.focus(); inp.select(); } }
+    return;
+  }
+  if(e.target.closest("[data-close]") || e.target.classList.contains("modal")){ closeModals(); return; }
+});
+$("#basketList").addEventListener("keydown", (e) => {
+  if(e.target.classList.contains("bedit") && e.key === "Enter"){ commitEdit(e.target.id.replace("edit-","")); }
+});
+$("#copyBtn").addEventListener("click", () => copyText(exportText()));
+$("#saveBtn").addEventListener("click", downloadTxt);
+$("#clearBtn").addEventListener("click", clearBasket);
+$("#textCopy").addEventListener("click", () => { const ta = $("#textOut"); ta.select(); copyText(ta.value); });
+document.addEventListener("keydown", (e) => { if(e.key === "Escape") closeModals(); });
+
+/* ---------- 시작 ---------- */
+if(!load()) state.topic = "물";
+$("#topic").value = state.topic;
+$("#helpTypes").innerHTML = TYPES.map(t => `<div>${badge(t)}<span>${t.desc}</span></div>`).join("");
+renderDeck(); syncDeck(); syncDraw(); renderView(); renderBasket();
+</script>
+<!--BODY-END-->
+</body>
+</html>

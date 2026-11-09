@@ -1,0 +1,772 @@
+<title>나의 학습자상 레이더</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: 상단 고정 탭 + 가운데 정렬 1100px 작업 영역, 결과는 차트|성찰 2열(좁으면 1열) */
+:root{
+  --bg:#EEF2F8; --surface:#FFFFFF; --surface-2:#F4F6FB; --fg:#1B2436; --muted:#5A6478;
+  --line:#D5DCEA; --grid:#C3CCDE; --ink:#2446B8; --ink-fg:#FFFFFF; --ink-soft:rgba(36,70,184,.12);
+  --good:#2B7A3E; --grow:#B4530F; --danger:#C92A2A;
+  --font:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1524; --surface:#182033; --surface-2:#1F2940; --fg:#E8ECF5; --muted:#9AA5BD;
+  --line:#2C3852; --grid:#3A4763; --ink:#86A2FF; --ink-fg:#0F1524; --ink-soft:rgba(134,162,255,.18);
+  --good:#69DB7C; --grow:#FFA94D; --danger:#FF8787; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1524; --surface:#182033; --surface-2:#1F2940; --fg:#E8ECF5; --muted:#9AA5BD;
+  --line:#2C3852; --grid:#3A4763; --ink:#86A2FF; --ink-fg:#0F1524; --ink-soft:rgba(134,162,255,.18);
+  --good:#69DB7C; --grow:#FFA94D; --danger:#FF8787; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:18px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+h1,h2,h3{text-wrap:balance;line-height:1.3;margin:0}
+.wrap{max-width:1100px;margin:0 auto}
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:12px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);margin-bottom:24px}
+.brand{font-weight:800;font-size:20px;display:flex;align-items:center;gap:10px}
+.brand svg{flex:none}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:inherit;font-size:16px;font-weight:600;cursor:pointer}
+.tab[aria-current="page"]{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.tab:disabled{opacity:.45;cursor:not-allowed}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.btn{min-height:48px;padding:0 20px;border-radius:14px;border:1px solid var(--line);background:var(--surface);font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:var(--ink-fg)}
+.btn.danger{color:var(--danger);border-color:var(--danger)}
+.btn.small{min-height:44px;padding:0 14px;font-size:16px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:24px}
+.muted{color:var(--muted)}
+.small-t{font-size:15px}
+label.f{display:block;font-weight:700;margin-bottom:6px}
+.inp{width:100%;min-height:50px;padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2)}
+textarea.inp{min-height:84px;resize:vertical}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.stack{display:grid;gap:16px}
+
+/* 시작 */
+.start{display:grid;gap:28px;grid-template-columns:1fr;align-items:center}
+@media (min-width:860px){.start{grid-template-columns:1.05fr 1fr}}
+.orbit{position:relative;width:min(360px,82vw);aspect-ratio:1;max-width:100%;margin:0 auto}
+.orbit .o{position:absolute;transform:translate(-50%,-50%);width:66px;height:66px;border-radius:50%;display:grid;place-items:center;font-size:28px;background:var(--surface);border:3px solid}
+.orbit .o span{position:absolute;top:100%;margin-top:2px;font-size:13px;font-weight:700;color:var(--fg);white-space:nowrap}
+.orbit .center{position:absolute;inset:30%;border-radius:50%;background:var(--ink-soft);display:grid;place-items:center;text-align:center;font-weight:800;font-size:17px;color:var(--ink);padding:8px}
+.hero h1{font-size:clamp(30px,5vw,44px);margin-bottom:10px}
+.hero p{margin:0 0 20px;max-width:34em}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--surface-2);font-weight:600;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.notice{font-size:15px;background:var(--ink-soft);border-radius:12px;padding:10px 14px}
+
+/* 자기평가 */
+.progress{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;margin-bottom:8px}
+.seg{height:14px;border-radius:7px;border:none;background:var(--line);cursor:pointer;padding:0;min-height:14px}
+.seg.done{background:var(--seg)}
+.seg.now{outline:3px solid var(--fg);outline-offset:2px}
+.seg:disabled{cursor:default}
+.evalcard{max-width:760px;margin:0 auto;border-top:10px solid var(--pc)}
+.evalhead{display:flex;gap:16px;align-items:center;margin-bottom:12px}
+.bigicon{width:76px;height:76px;flex:none;border-radius:20px;display:grid;place-items:center;font-size:40px;background:var(--surface-2);border:2px solid var(--pc)}
+.evalhead h2{font-size:28px}
+.en{font-size:15px;color:var(--muted);font-weight:600}
+.item{background:var(--surface-2);border-radius:16px;padding:18px;margin-block:16px}
+.item .q{font-weight:700;font-size:20px;margin-bottom:10px}
+.scorebox{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+.face{font-size:44px;line-height:1;width:56px;text-align:center}
+.scoretext{font-size:22px;font-weight:800}
+input[type=range]{width:100%;height:44px;accent-color:var(--pc);cursor:pointer}
+.ticks{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.tick{min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:14px;font-weight:600;line-height:1.2;cursor:pointer;padding:4px}
+.tick[aria-pressed="true"]{border-color:var(--pc);box-shadow:inset 0 0 0 2px var(--pc)}
+.navrow{display:flex;justify-content:space-between;gap:12px;margin-top:20px;flex-wrap:wrap}
+
+/* 결과 */
+.reshead{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:end;margin-bottom:18px}
+.reshead h2{font-size:clamp(24px,3.4vw,32px)}
+.resgrid{display:grid;gap:20px;grid-template-columns:1fr}
+@media (min-width:920px){.resgrid{grid-template-columns:1fr 1fr}}
+.resgrid > *{min-width:0}
+.chartbox{position:relative}
+.radar{width:100%;height:auto;display:block}
+.radar .shape{transform-box:view-box;transform-origin:50% 50%;animation:grow .6s cubic-bezier(.2,.8,.2,1) both}
+@keyframes grow{from{transform:scale(0)}to{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.radar .shape{animation:none}}
+.hit{cursor:pointer}
+.tip{position:absolute;z-index:3;max-width:260px;background:var(--fg);color:var(--bg);border-radius:12px;padding:8px 12px;font-size:15px;line-height:1.4;pointer-events:none;transform:translate(-50%,calc(-100% - 12px))}
+.scorelist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 14px;margin-top:10px;font-size:15px}
+.scorelist div{display:flex;align-items:center;gap:6px}
+.dot{width:12px;height:12px;border-radius:50%;flex:none}
+.scorelist b{margin-left:auto;font-variant-numeric:tabular-nums}
+.tag{display:inline-block;font-size:14px;font-weight:800;letter-spacing:.04em;padding:2px 10px;border-radius:999px;margin-bottom:8px}
+.tag.s{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+.tag.g{background:color-mix(in srgb,var(--grow) 16%,transparent);color:var(--grow)}
+.pl{display:grid;gap:10px}
+.pitem{display:flex;gap:12px;align-items:flex-start;padding:12px;border-radius:14px;background:var(--surface-2);border-left:6px solid var(--pc)}
+.pitem .ic{font-size:28px;line-height:1}
+.pitem .nm{font-weight:800}
+.pitem .ev{font-size:15px;color:var(--muted)}
+.reflect h3{font-size:19px;margin-bottom:6px}
+.qlabel{font-weight:600;margin:10px 0 4px;font-size:17px}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+
+/* 기록 */
+.reclist{display:grid;gap:10px}
+.rec{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:12px 14px;border-radius:14px;background:var(--surface-2);border:2px solid transparent}
+.rec.sel{border-color:var(--ink)}
+.rec label{display:flex;gap:10px;align-items:center;flex:1;min-width:200px;cursor:pointer}
+.rec input[type=checkbox]{width:26px;height:26px;accent-color:var(--ink)}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:15px;margin-top:6px}
+.legend i{display:inline-block;width:28px;height:0;border-top:3px solid;vertical-align:middle;margin-right:6px}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:16px;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+td.n,th.n{text-align:right}
+.up{color:var(--good);font-weight:800}.down{color:var(--grow);font-weight:800}
+details summary{cursor:pointer;font-weight:800;min-height:44px;display:flex;align-items:center}
+.empty{text-align:center;padding:28px;color:var(--muted)}
+
+/* 모달·토스트 */
+.modal{position:fixed;inset:0;z-index:20;background:rgba(10,14,24,.55);display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.modal .card{width:min(640px,100%);max-height:88vh;overflow:auto}
+.modal img{display:block;width:100%;border-radius:12px;border:1px solid var(--line)}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:12px 20px;border-radius:999px;font-weight:700;z-index:30;max-width:calc(100% - 32px)}
+.framenote{font-size:14px;color:var(--muted);text-align:center;margin-top:28px}
+
+@media print{
+  @page{size:A4;margin:12mm}
+  body{background:#fff;color:#111;font-size:13px;padding:0}
+  body::before,.topbar,.actions,.no-print,.framenote,#view-start,#view-eval,#view-records{display:none!important}
+  #view-result{display:block!important}
+  .card{border:1px solid #ccc;padding:12px;break-inside:avoid}
+  .resgrid{grid-template-columns:1fr 1fr;gap:10px}
+  textarea.inp,.inp{border:1px solid #ccc;background:#fff;min-height:0}
+  .radar .shape{animation:none}
+}
+</style>
+
+<div class="wrap">
+  <header class="topbar">
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><polygon points="15,2 27,10 23,26 7,26 3,10" style="fill:none;stroke:var(--ink);stroke-width:2"/><polygon points="15,8 22,12 19,21 10,22 8,12" style="fill:var(--ink);fill-opacity:.35;stroke:var(--ink);stroke-width:2"/></svg>
+      나의 학습자상 레이더
+    </div>
+    <nav class="tabs" aria-label="화면 이동">
+      <button class="tab" id="tab-start" data-view="start">시작</button>
+      <button class="tab" id="tab-eval" data-view="eval" disabled>자기평가</button>
+      <button class="tab" id="tab-result" data-view="result" disabled>결과</button>
+      <button class="tab" id="tab-records" data-view="records">기록</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- 시작 -->
+    <section id="view-start">
+      <div class="start">
+        <div class="hero">
+          <h1>나는 어떤 학습자일까?</h1>
+          <p class="muted">IB 학습자상 10가지를 하나씩 읽고 내 모습을 점수로 매겨 봐요. 다 하면 나만의 레이더 모양이 그려지고, 다음에 키워 볼 힘과 목표를 정할 수 있어요.</p>
+          <div class="card stack">
+            <div>
+              <label class="f" for="nick">별명 또는 번호</label>
+              <input class="inp" id="nick" maxlength="20" placeholder="예) 12번, 별빛탐험가" autocomplete="off">
+            </div>
+            <div class="notice">실명 대신 별명이나 번호를 써 주세요. 기록은 이 기기에만 저장되고 어디로도 보내지지 않아요.</div>
+            <div>
+              <span class="f" id="when-label">평가 시점</span>
+              <div class="chips" role="group" aria-labelledby="when-label" id="when-chips"></div>
+              <input class="inp" id="when-custom" maxlength="20" placeholder="직접 입력 (예: 1학기 끝)" style="margin-top:10px" hidden>
+            </div>
+            <div class="row">
+              <button class="btn primary" id="btn-start">시작하기</button>
+              <button class="btn" id="btn-go-records">내 기록 보기</button>
+            </div>
+          </div>
+        </div>
+        <div class="orbit" id="orbit" aria-hidden="true"><div class="center">10가지<br>학습자상</div></div>
+      </div>
+    </section>
+
+    <!-- 자기평가 -->
+    <section id="view-eval" hidden>
+      <div style="max-width:760px;margin:0 auto 14px">
+        <div class="row" style="justify-content:space-between;margin-bottom:8px">
+          <strong id="eval-who"></strong><span class="muted small-t" id="eval-count"></span>
+        </div>
+        <div class="progress" id="progress"></div>
+      </div>
+      <div class="card evalcard" id="evalcard"></div>
+    </section>
+
+    <!-- 결과 -->
+    <section id="view-result" hidden>
+      <div class="reshead">
+        <div><h2 id="res-title"></h2><div class="muted" id="res-sub"></div></div>
+      </div>
+      <div class="resgrid">
+        <div class="card">
+          <div class="chartbox" id="res-chart"></div>
+          <div class="scorelist" id="res-scores"></div>
+          <p class="muted small-t no-print" style="margin:10px 0 0">점에 마우스를 올리거나 눌러 보면 점수와 내가 쓴 장면이 보여요.</p>
+        </div>
+        <div class="stack">
+          <div class="card" id="res-strengths"></div>
+          <div class="card" id="res-growth"></div>
+          <div class="card reflect" id="res-reflect"></div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="btn-save">기록 저장</button>
+        <button class="btn" id="btn-png">결과 이미지(PNG)</button>
+        <button class="btn" id="btn-print">인쇄</button>
+        <button class="btn" id="btn-again">처음부터 다시</button>
+      </div>
+    </section>
+
+    <!-- 기록 -->
+    <section id="view-records" hidden>
+      <div class="resgrid">
+        <div class="card">
+          <h2 style="font-size:24px;margin-bottom:4px">내 기록</h2>
+          <p class="muted small-t" style="margin:0 0 14px">비교할 기록을 2개까지 골라요. 먼저 한 기록은 회색 점선, 나중 기록은 색으로 채워져요.</p>
+          <div class="reclist" id="reclist"></div>
+          <div class="actions" style="margin-top:16px">
+            <button class="btn small" id="btn-export">JSON 백업</button>
+            <button class="btn small" id="btn-import">불러오기</button>
+            <button class="btn small danger" id="btn-clear">내 기록 모두 지우기</button>
+            <input type="file" id="file-import" accept=".json,application/json" hidden>
+          </div>
+        </div>
+        <div class="card">
+          <div class="chartbox" id="cmp-chart"></div>
+          <div class="legend" id="cmp-legend"></div>
+          <div class="tablewrap" id="cmp-table" style="margin-top:12px"></div>
+        </div>
+      </div>
+      <details class="card" style="margin-top:20px" id="teacher">
+        <summary>교사 모드: 학급 평균 차트</summary>
+        <p class="muted small-t">학생들이 백업한 JSON 파일을 여러 개 한꺼번에 골라 불러오면 학급 평균 레이더를 보여 줘요. 불러온 파일은 이 화면에서만 쓰고 저장하지 않아요.</p>
+        <div class="row">
+          <button class="btn small" id="btn-teacher-files">학생 JSON 파일 고르기</button>
+          <input type="file" id="file-teacher" accept=".json,application/json" multiple hidden>
+          <select class="inp" id="teacher-label" style="width:auto;min-width:180px" hidden></select>
+        </div>
+        <div id="teacher-out" style="margin-top:14px"></div>
+      </details>
+    </section>
+    <p class="framenote" id="framenote" hidden>이 링크에서는 파일 내려받기와 인쇄가 막혀 있어요. 결과 이미지는 길게 누르거나 마우스 오른쪽 버튼으로 저장하고, 백업은 복사해서 보관하세요. 인쇄가 필요하면 index.html 파일로 열어 쓰면 돼요.</p>
+  </main>
+</div>
+
+<div class="modal" id="modal" hidden><div class="card" role="dialog" aria-modal="true" id="modal-body"></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* =========================================================
+   선생님이 고치는 곳: 학습자상 데이터
+   - items 에 문항을 2~3개 넣으면 평균 점수가 차트에 반영돼요.
+   - color 는 학습자상 고유 색, short 는 차트 축 이름이에요.
+   ========================================================= */
+const PROFILES = [
+  {id:"inquirer", name:"탐구하는 사람", short:"탐구", en:"Inquirers", icon:"🔍", color:"#E8590C",
+   desc:"궁금한 것을 스스로 묻고 찾아본다",
+   items:["나는 궁금한 것이 생기면 질문하고 답을 찾아본다"],
+   reflect:["요즘 가장 궁금했던 것은?","그것을 알아보려면 무엇부터 할까?"]},
+  {id:"knowledgeable", name:"지식이 풍부한 사람", short:"지식", en:"Knowledgeable", icon:"📚", color:"#5C940D",
+   desc:"여러 분야를 배우고 생각을 넓힌다",
+   items:["나는 배운 것을 다른 상황에 연결해 설명할 수 있다"],
+   reflect:["이번에 새로 알게 된 것은?","그것을 어디에 써먹을 수 있을까?"]},
+  {id:"thinker", name:"사고하는 사람", short:"사고", en:"Thinkers", icon:"🧠", color:"#7048E8",
+   desc:"깊이 생각하고 문제를 해결한다",
+   items:["나는 문제를 풀 때 여러 방법을 생각해 본다"],
+   reflect:["최근 해결한 문제는?","다른 방법도 있었을까?"]},
+  {id:"communicator", name:"소통하는 사람", short:"소통", en:"Communicators", icon:"💬", color:"#1C7ED6",
+   desc:"내 생각을 표현하고 남의 말을 잘 듣는다",
+   items:["나는 내 생각을 분명히 말하고 친구 말을 끝까지 듣는다"],
+   reflect:["내 생각이 잘 전달된 순간은?","더 잘 들으려면 무엇을 바꿀까?"]},
+  {id:"principled", name:"원칙을 지키는 사람", short:"원칙", en:"Principled", icon:"⚖️", color:"#0B7285",
+   desc:"정직하고 공정하게 행동한다",
+   items:["나는 아무도 보지 않을 때도 약속과 규칙을 지킨다"],
+   reflect:["지키기 어려웠던 약속은?","다음에는 어떻게 할까?"]},
+  {id:"openminded", name:"열린 마음을 지닌 사람", short:"열린 마음", en:"Open-minded", icon:"🌏", color:"#0CA678",
+   desc:"다른 생각과 문화를 존중한다",
+   items:["나는 나와 다른 의견도 끝까지 듣고 생각해 본다"],
+   reflect:["나와 생각이 달랐던 친구는?","그 친구 입장은 어땠을까?"]},
+  {id:"caring", name:"배려하는 사람", short:"배려", en:"Caring", icon:"🤝", color:"#D6336C",
+   desc:"다른 사람을 아끼고 돕는다",
+   items:["나는 도움이 필요한 친구를 먼저 돕는다"],
+   reflect:["최근 누군가를 도운 경험은?","이번 주에 할 수 있는 배려는?"]},
+  {id:"risktaker", name:"도전하는 사람", short:"도전", en:"Risk-takers", icon:"🚀", color:"#E03131",
+   desc:"실패를 두려워하지 않고 새로 시도한다",
+   items:["나는 어려워 보여도 새로운 일에 도전한다"],
+   reflect:["망설이다 포기한 일은?","작게 시작해 볼 방법은?"]},
+  {id:"balanced", name:"균형 잡힌 사람", short:"균형", en:"Balanced", icon:"🧘", color:"#E67700",
+   desc:"공부·몸·마음의 균형을 지킨다",
+   items:["나는 공부, 운동, 쉼을 골고루 챙긴다"],
+   reflect:["요즘 부족한 것은 무엇일까?","하루에 넣을 수 있는 작은 습관은?"]},
+  {id:"reflective", name:"성찰하는 사람", short:"성찰", en:"Reflective", icon:"🪞", color:"#9C36B5",
+   desc:"나를 돌아보고 더 나아질 방법을 찾는다",
+   items:["나는 활동이 끝나면 잘한 점과 고칠 점을 돌아본다"],
+   reflect:["최근 활동에서 잘한 점은?","다음에 바꾸고 싶은 한 가지는?"]}
+];
+const SCALE = {1:{t:"아직 어려워요",f:"🌱"},2:{t:"가끔 해요",f:"🙂"},3:{t:"절반쯤 해요",f:"😊"},4:{t:"자주 해요",f:"😄"},5:{t:"항상 해요",f:"🤩"}};
+const WHEN_PRESETS = ["단원 시작","단원 중간","단원 끝"];
+const STORE_KEY = "learner-profile-radar-v1";
+/* ========================================================= */
+
+const FONT = '"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif';
+const IN_FRAME = (()=>{try{return window.self!==window.top}catch(e){return true}})();
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = n => Number.isInteger(n) ? String(n) : n.toFixed(1);
+const dateStr = iso => {const d=new Date(iso);return `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`};
+const scaleText = v => SCALE[Math.round(v)]?.t || "";
+
+/* ---------- 저장소 ---------- */
+let records = [];
+function loadRecords(){
+  try{const raw=localStorage.getItem(STORE_KEY);const arr=raw?JSON.parse(raw):[];records=Array.isArray(arr)?arr:[]}
+  catch(e){records=[]}
+}
+function persist(){
+  try{localStorage.setItem(STORE_KEY,JSON.stringify(records));return true}catch(e){return false}
+}
+
+/* ---------- 상태 ---------- */
+let whenChoice = WHEN_PRESETS[0];
+let session = null;   // {nickname,label,idx,items:{id:[..]},evidence:{id:""},answered:Set}
+let result = null;    // 결과 화면 기록 초안
+let savedId = null;
+let selected = [];    // 기록 비교 선택 id
+
+/* ---------- 화면 이동 ---------- */
+function show(view){
+  ["start","eval","result","records"].forEach(v=>{
+    $("view-"+v).hidden = v!==view;
+    const t=$("tab-"+v); if(v===view) t.setAttribute("aria-current","page"); else t.removeAttribute("aria-current");
+  });
+  $("tab-eval").disabled = !session;
+  $("tab-result").disabled = !result;
+  if(view==="records") renderRecords();
+  window.scrollTo({top:0});
+}
+document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{
+  const v=b.dataset.view; if(v==="eval") renderEval(); if(v==="result") renderResult(false); show(v);
+}));
+
+/* ---------- 토스트·모달 ---------- */
+let toastTimer;
+function toast(msg){const t=$("toast");t.textContent=msg;t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.hidden=true,2400)}
+function openModal(html){$("modal-body").innerHTML=html;$("modal").hidden=false;const f=$("modal-body").querySelector("button,textarea");f&&f.focus()}
+function closeModal(){$("modal").hidden=true;$("modal-body").innerHTML=""}
+$("modal").addEventListener("click",e=>{if(e.target.id==="modal"||e.target.dataset.close!==undefined)closeModal()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("modal").hidden)closeModal()});
+
+/* ---------- 시작 화면 ---------- */
+function renderStart(){
+  const orbit=$("orbit");
+  PROFILES.forEach((p,i)=>{
+    const a=(-90+i*36)*Math.PI/180, el=document.createElement("div");
+    el.className="o"; el.style.left=(50+40*Math.cos(a))+"%"; el.style.top=(50+40*Math.sin(a))+"%";
+    el.style.borderColor=p.color; el.innerHTML=`${p.icon}<span>${esc(p.short)}</span>`; orbit.appendChild(el);
+  });
+  const chips=$("when-chips");
+  [...WHEN_PRESETS,"직접 입력"].forEach(w=>{
+    const b=document.createElement("button"); b.className="chip"; b.type="button"; b.textContent=w;
+    b.setAttribute("aria-pressed", w===whenChoice); b.onclick=()=>{whenChoice=w;
+      chips.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c===b));
+      $("when-custom").hidden = w!=="직접 입력"; if(w==="직접 입력") $("when-custom").focus();};
+    chips.appendChild(b);
+  });
+}
+$("btn-start").onclick=()=>{
+  const nick=$("nick").value.trim();
+  if(!nick){toast("별명이나 번호를 먼저 써 주세요");$("nick").focus();return}
+  let label=whenChoice; if(label==="직접 입력"){label=$("when-custom").value.trim(); if(!label){toast("평가 시점을 써 주세요");$("when-custom").focus();return}}
+  session={nickname:nick,label,idx:0,items:{},evidence:{},answered:new Set()};
+  PROFILES.forEach(p=>{session.items[p.id]=p.items.map(()=>3);session.evidence[p.id]=""});
+  result=null; savedId=null;
+  renderEval(); show("eval");
+};
+$("btn-go-records").onclick=()=>show("records");
+
+/* ---------- 자기평가 ---------- */
+function renderEval(){
+  if(!session) return;
+  const i=session.idx, p=PROFILES[i];
+  $("eval-who").textContent=`${session.nickname} · ${session.label}`;
+  $("eval-count").textContent=`${i+1} / ${PROFILES.length}`;
+  const prog=$("progress"); prog.innerHTML="";
+  PROFILES.forEach((q,k)=>{
+    const b=document.createElement("button"); b.className="seg"+(session.answered.has(q.id)?" done":"")+(k===i?" now":"");
+    b.style.setProperty("--seg",q.color); b.setAttribute("aria-label",`${k+1}번째 ${q.name}${session.answered.has(q.id)?" (답함)":""}`);
+    b.disabled = !(session.answered.has(q.id) || k===session.answered.size);
+    b.onclick=()=>{session.idx=k;renderEval()}; prog.appendChild(b);
+  });
+  const card=$("evalcard"); card.style.setProperty("--pc",p.color);
+  card.innerHTML=`
+    <div class="evalhead"><div class="bigicon" aria-hidden="true">${p.icon}</div>
+      <div><h2>${esc(p.name)}</h2><div class="en">${esc(p.en)}</div></div></div>
+    <p style="margin:0;font-size:20px">${esc(p.desc)}</p>
+    ${p.items.map((q,j)=>{const v=session.items[p.id][j];return `
+      <div class="item" data-j="${j}">
+        <div class="q" id="q-${j}">${esc(q)}</div>
+        <div class="scorebox"><div class="face" aria-hidden="true">${SCALE[v].f}</div>
+          <div><div class="scoretext">${v}점 · ${SCALE[v].t}</div></div></div>
+        <input type="range" min="1" max="5" step="1" value="${v}" id="range-${j}" aria-labelledby="q-${j}">
+        <div class="ticks">${[1,2,3,4,5].map(n=>`<button type="button" class="tick" data-n="${n}" aria-pressed="${n===v}">${n} ${SCALE[n].t}</button>`).join("")}</div>
+      </div>`}).join("")}
+    <label class="f" for="evi">이렇게 행동한 장면 (한 줄)</label>
+    <input class="inp" id="evi" maxlength="80" placeholder="예) 과학 시간에 궁금한 점을 질문하고 책에서 찾아봤어요" value="${esc(session.evidence[p.id])}">
+    <div class="navrow">
+      <button class="btn" id="btn-prev" ${i===0?"disabled":""}>← 이전</button>
+      <button class="btn primary" id="btn-next">${i===PROFILES.length-1?"결과 보기":"다음 →"}</button>
+    </div>`;
+  card.querySelectorAll(".item").forEach(it=>{
+    const j=+it.dataset.j, range=it.querySelector("input");
+    const set=v=>{v=+v;session.items[p.id][j]=v;range.value=v;
+      it.querySelector(".face").textContent=SCALE[v].f;
+      it.querySelector(".scoretext").textContent=`${v}점 · ${SCALE[v].t}`;
+      it.querySelectorAll(".tick").forEach(t=>t.setAttribute("aria-pressed",+t.dataset.n===v));};
+    range.addEventListener("input",()=>set(range.value));
+    it.querySelectorAll(".tick").forEach(t=>t.onclick=()=>set(t.dataset.n));
+  });
+  $("evi").addEventListener("input",e=>session.evidence[p.id]=e.target.value);
+  $("btn-prev").onclick=()=>{session.idx--;renderEval()};
+  $("btn-next").onclick=()=>{
+    session.answered.add(p.id);
+    if(i<PROFILES.length-1){session.idx++;renderEval();window.scrollTo({top:0})}
+    else{buildResult();renderResult(true);show("result")}
+  };
+}
+
+/* ---------- 결과 계산 ---------- */
+function avg(a){return Math.round(a.reduce((s,x)=>s+x,0)/a.length*10)/10}
+function buildResult(){
+  const scores={},items={},evidence={};
+  PROFILES.forEach(p=>{items[p.id]=[...session.items[p.id]];scores[p.id]=avg(items[p.id]);evidence[p.id]=session.evidence[p.id].trim()});
+  result={id:"r"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+    nickname:session.nickname,label:session.label,date:new Date().toISOString(),
+    scores,items,evidence,reflections:{},goal:"",chosenGrowth:""};
+  savedId=null;
+}
+function classify(scores){
+  const vals=PROFILES.map(p=>scores[p.id]), max=Math.max(...vals), min=Math.min(...vals);
+  if(max===min) return {strengths:[],growth:[],allEqual:true};
+  const desc=[...vals].sort((a,b)=>b-a), asc=[...vals].sort((a,b)=>a-b);
+  let s2=desc[1]; if(s2===min) s2=max;
+  const strengths=PROFILES.filter(p=>scores[p.id]>=s2);
+  let t2=asc[1]; if(t2===max) t2=min;
+  let growth=PROFILES.filter(p=>scores[p.id]<=t2 && !strengths.includes(p));
+  if(!growth.length) growth=PROFILES.filter(p=>scores[p.id]===min);
+  return {strengths,growth,allEqual:false};
+}
+
+/* ---------- 레이더 차트 (SVG 직접 그리기) ---------- */
+function radarSVG(datasets,o={}){
+  const S=600,c=S/2,R=190,n=PROFILES.length;
+  const col=Object.assign({grid:"var(--grid)",label:"var(--fg)",num:"var(--muted)"},o.colors||{});
+  const ang=i=>(-90+i*360/n)*Math.PI/180;
+  const pt=(i,v)=>[c+Math.cos(ang(i))*R*v/5,c+Math.sin(ang(i))*R*v/5];
+  const P=a=>a.map(x=>x.toFixed(1)).join(",");
+  let s=`<svg class="radar" viewBox="0 0 ${S} ${S}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(o.aria||"학습자상 레이더 차트")}" font-family='${FONT}'>`;
+  if(o.bg) s+=`<rect width="${S}" height="${S}" style="fill:${o.bg}"/>`;
+  for(let lv=1;lv<=5;lv++){
+    s+=`<polygon points="${PROFILES.map((_,i)=>P(pt(i,lv))).join(" ")}" style="fill:none;stroke:${col.grid};stroke-width:${lv===5?2:1}"/>`;
+  }
+  PROFILES.forEach((_,i)=>{const [x,y]=pt(i,5);s+=`<line x1="${c}" y1="${c}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" style="stroke:${col.grid};stroke-width:1"/>`});
+  for(let lv=1;lv<=5;lv++){const [x,y]=pt(0,lv);s+=`<text x="${x+7}" y="${y+5}" font-size="14" style="fill:${col.num}">${lv}</text>`}
+  datasets.forEach((d,k)=>{
+    const pts=PROFILES.map((p,i)=>pt(i,d.scores[p.id]||0));
+    const dash=d.dashed?"stroke-dasharray:8 6;":"";
+    s+=`<g class="${o.animate===false?"":"shape"}"><polygon points="${pts.map(P).join(" ")}" style="fill:${d.fill||"none"};fill-opacity:${d.fill?(d.fillOpacity??.25):0};stroke:${d.stroke};stroke-width:3;stroke-linejoin:round;${dash}"/>`;
+    if(d.dots!==false) pts.forEach(([x,y],i)=>{s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${d.dashed?4:6}" style="fill:${d.dashed?d.stroke:PROFILES[i].color};stroke:${o.bg||"var(--surface)"};stroke-width:2"/>`});
+    s+=`</g>`;
+    if(d.interactive) pts.forEach(([x,y],i)=>{s+=`<circle class="hit" data-i="${i}" data-k="${k}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="18" tabindex="0" role="button" aria-label="${esc(PROFILES[i].name)} ${fmt(d.scores[PROFILES[i].id])}점" style="fill:transparent"/>`});
+  });
+  PROFILES.forEach((p,i)=>{
+    const a=ang(i),cs=Math.cos(a),sn=Math.sin(a),lr=R+34;
+    const x=c+cs*lr, y=c+sn*lr+(sn>0.5?14:sn<-0.5?-2:6);
+    const anchor=Math.abs(cs)<0.2?"middle":cs>0?"start":"end";
+    s+=`<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" font-size="20" font-weight="700"><tspan style="fill:${p.color}">● </tspan><tspan style="fill:${col.label}">${esc(p.short)}</tspan></text>`;
+  });
+  return s+"</svg>";
+}
+function attachTips(box,getInfo){
+  let tip=box.querySelector(".tip"); if(!tip){tip=document.createElement("div");tip.className="tip";tip.hidden=true;box.appendChild(tip)}
+  let pinned=null;
+  const showTip=el=>{const br=box.getBoundingClientRect(),r=el.getBoundingClientRect();
+    tip.innerHTML=getInfo(+el.dataset.i,+el.dataset.k);tip.hidden=false;
+    let x=r.left+r.width/2-br.left; x=Math.max(130,Math.min(br.width-130,x));
+    tip.style.left=x+"px";tip.style.top=(r.top-br.top+6)+"px";};
+  box.querySelectorAll(".hit").forEach(h=>{
+    h.addEventListener("pointerenter",e=>{if(e.pointerType==="mouse")showTip(h)});
+    h.addEventListener("pointerleave",e=>{if(e.pointerType==="mouse"&&pinned!==h)tip.hidden=true});
+    h.addEventListener("focus",()=>showTip(h));
+    h.addEventListener("blur",()=>{tip.hidden=true;pinned=null});
+    h.addEventListener("click",e=>{e.stopPropagation();if(pinned===h){pinned=null;tip.hidden=true}else{pinned=h;showTip(h)}});
+  });
+  box.addEventListener("click",()=>{pinned=null;tip.hidden=true});
+}
+
+/* ---------- 결과 화면 ---------- */
+function plItem(p,rec){
+  const ev=rec.evidence[p.id];
+  return `<div class="pitem" style="--pc:${p.color}"><div class="ic" aria-hidden="true">${p.icon}</div>
+    <div><div class="nm">${esc(p.name)} · ${fmt(rec.scores[p.id])}점</div>
+    ${ev?`<div class="ev">"${esc(ev)}"</div>`:""}</div></div>`;
+}
+function currentGrowth(){
+  const c=classify(result.scores);
+  if(c.allEqual) return result.chosenGrowth?PROFILES.filter(p=>p.id===result.chosenGrowth):[];
+  return c.growth;
+}
+function renderResult(fresh){
+  if(!result) return;
+  const rec=result, c=classify(rec.scores);
+  $("res-title").textContent=`${rec.nickname}의 학습자상 레이더`;
+  $("res-sub").textContent=`${rec.label} · ${dateStr(rec.date)}`;
+  const box=$("res-chart");
+  box.innerHTML=radarSVG([{scores:rec.scores,stroke:"var(--ink)",fill:"var(--ink)",interactive:true}],{animate:fresh!==false,aria:`${rec.nickname}의 학습자상 레이더 차트`});
+  attachTips(box,i=>{const p=PROFILES[i],v=rec.scores[p.id],ev=rec.evidence[p.id];
+    return `<b>${esc(p.name)}</b> ${fmt(v)}점 · ${scaleText(v)}${ev?`<br>${esc(ev)}`:""}`});
+  $("res-scores").innerHTML=PROFILES.map(p=>`<div><span class="dot" style="background:${p.color}"></span>${esc(p.short)}<b>${fmt(rec.scores[p.id])}</b></div>`).join("");
+
+  if(c.allEqual){
+    $("res-strengths").innerHTML=`<span class="tag s">고른 모양</span><h3 style="font-size:20px;margin-bottom:6px">모든 학습자상이 ${fmt(rec.scores[PROFILES[0].id])}점으로 같아요</h3>
+      <p class="muted" style="margin:0">고르게 힘을 쓰고 있어요. 그중에서 이번에 더 키워 보고 싶은 힘을 하나 골라 보세요.</p>`;
+    $("res-growth").innerHTML=`<span class="tag g">성장 영역</span><label class="f" for="pick-growth">키워 볼 힘 고르기</label>
+      <select class="inp" id="pick-growth"><option value="">골라 주세요</option>${PROFILES.map(p=>`<option value="${p.id}" ${rec.chosenGrowth===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}</select>`;
+    $("pick-growth").onchange=e=>{rec.chosenGrowth=e.target.value;renderReflect()};
+  }else{
+    $("res-strengths").innerHTML=`<span class="tag s">강점</span><p class="muted" style="margin:0 0 10px">내가 자주 보여 주는 힘이에요.</p><div class="pl">${c.strengths.map(p=>plItem(p,rec)).join("")}</div>`;
+    $("res-growth").innerHTML=`<span class="tag g">성장 영역</span><p class="muted" style="margin:0 0 10px">다음에 키워 볼 힘이에요. 지금 낮은 점수는 앞으로 자랄 자리가 크다는 뜻이에요.</p><div class="pl">${c.growth.map(p=>plItem(p,rec)).join("")}</div>`;
+  }
+  renderReflect();
+  $("btn-save").textContent=savedId?"저장됨 · 다시 저장":"기록 저장";
+}
+function renderReflect(){
+  const rec=result, growth=currentGrowth();
+  const box=$("res-reflect");
+  box.innerHTML=`<h3>성찰 질문</h3>
+    ${growth.length?growth.map(p=>{const ans=rec.reflections[p.id]||["",""];return `
+      <div style="margin-top:12px"><div class="nm" style="font-weight:800;color:${p.color}">${p.icon} ${esc(p.name)}</div>
+      ${p.reflect.map((q,j)=>`<div class="qlabel"><label for="rf-${p.id}-${j}">${esc(q)}</label></div>
+        <textarea class="inp" id="rf-${p.id}-${j}" data-id="${p.id}" data-j="${j}" maxlength="300">${esc(ans[j]||"")}</textarea>`).join("")}</div>`}).join("")
+    :`<p class="muted">위에서 키워 볼 힘을 고르면 질문이 나와요.</p>`}
+    <div style="margin-top:18px"><label class="f" for="goal">다음 목표 한 문장</label>
+    <input class="inp" id="goal" maxlength="100" placeholder="예) 모둠 활동에서 친구 말을 끝까지 듣고 질문을 하나씩 해 볼래요" value="${esc(rec.goal)}"></div>`;
+  box.querySelectorAll("textarea").forEach(t=>t.addEventListener("input",()=>{
+    const id=t.dataset.id; rec.reflections[id]=rec.reflections[id]||["",""]; rec.reflections[id][+t.dataset.j]=t.value;}));
+  $("goal").addEventListener("input",e=>rec.goal=e.target.value);
+}
+$("btn-save").onclick=()=>{
+  if(!result) return;
+  const copy=JSON.parse(JSON.stringify(result));
+  const at=records.findIndex(r=>r.id===copy.id);
+  if(at>=0) records[at]=copy; else records.push(copy);
+  savedId=copy.id;
+  const ok=persist();
+  $("btn-save").textContent="저장됨 · 다시 저장";
+  toast(ok?"기록을 저장했어요":"이 브라우저는 저장이 막혀 있어요. 백업(JSON)으로 보관해 주세요");
+};
+$("btn-again").onclick=()=>{session=null;result=null;savedId=null;show("start")};
+$("btn-print").hidden=IN_FRAME;
+$("btn-print").onclick=()=>window.print();
+
+/* ---------- PNG 만들기 ---------- */
+function wrapText(ctx,text,x,y,maxW,lh){
+  const chars=[...String(text)]; let line="";
+  for(const ch of chars){const t=line+ch; if(ctx.measureText(t).width>maxW&&line){ctx.fillText(line,x,y);y+=lh;line=ch.trimStart()}else line=t}
+  if(line){ctx.fillText(line,x,y);y+=lh} return y;
+}
+function makePNG(rec){
+  return new Promise((resolve,reject)=>{
+    const svg=radarSVG([{scores:rec.scores,stroke:"#2446B8",fill:"#2446B8"}],{animate:false,bg:"#FFFFFF",colors:{grid:"#C3CCDE",label:"#1B2436",num:"#5A6478"}});
+    const img=new Image();
+    img.onload=()=>{
+      const W=1080,H=1640,cv=document.createElement("canvas");cv.width=W;cv.height=H;
+      const x=cv.getContext("2d"),F=w=>`${w} "Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif`;
+      x.fillStyle="#FFFFFF";x.fillRect(0,0,W,H);
+      x.fillStyle="#2446B8";x.fillRect(0,0,W,150);
+      x.fillStyle="#FFFFFF";x.font=F("800 50px");x.fillText("나의 학습자상 레이더",60,88);
+      x.font=F("500 28px");x.fillText(`${rec.nickname} · ${rec.label} · ${dateStr(rec.date)}`,60,130);
+      x.drawImage(img,100,170,880,880);
+      const c=classify(rec.scores); let y=1100;
+      const block=(title,color,body)=>{x.fillStyle=color;x.font=F("800 34px");x.fillText(title,60,y);y+=50;
+        x.fillStyle="#1B2436";x.font=F("500 30px");y=wrapText(x,body,60,y,W-120,44)+22;};
+      if(c.allEqual) block("고른 모양","#2B7A3E",`모든 학습자상이 ${fmt(rec.scores[PROFILES[0].id])}점으로 같아요`);
+      else block("강점","#2B7A3E",c.strengths.map(p=>`${p.name}(${fmt(rec.scores[p.id])})`).join(", "));
+      const g=c.allEqual?PROFILES.filter(p=>p.id===rec.chosenGrowth):c.growth;
+      if(g.length) block("성장 영역","#B4530F",g.map(p=>`${p.name}(${fmt(rec.scores[p.id])})`).join(", "));
+      block("다음 목표","#2446B8",rec.goal.trim()||"아직 쓰지 않았어요");
+      resolve(cv.toDataURL("image/png"));
+    };
+    img.onerror=()=>reject(new Error("차트를 그리지 못했어요"));
+    img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+  });
+}
+function downloadBlob(name,blob){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+/* 링크(claude.ai)로 열면 downloads 기능으로, 파일로 열면 일반 내려받기로 저장 */
+let DL=null;
+try{window.claude?.use?.("downloads").then(d=>{DL=d;updateFrameNote()}).catch(()=>{})}catch(e){}
+const canSave=()=>!IN_FRAME||!!DL;
+async function saveFile(name,blob){
+  if(!IN_FRAME){downloadBlob(name,blob);toast("파일을 내려받았어요");return true}
+  if(!DL) return false;
+  try{await DL.save({filename:name,data:blob});toast("파일을 저장했어요");return true}
+  catch(e){if(e&&e.code==="declined")return true;if(e&&e.code==="rate_limited"){toast("잠시 뒤 다시 눌러 주세요");return true}return false}
+}
+function updateFrameNote(){
+  $("framenote").hidden=!IN_FRAME;
+  $("framenote").textContent=DL
+    ?"이 링크에서는 인쇄가 되지 않아요. 결과는 PNG로 저장해 쓰고, 인쇄가 필요하면 index.html 파일로 열어 쓰세요."
+    :"이 화면에서는 파일 내려받기와 인쇄가 막혀 있어요. 결과 이미지는 길게 누르거나 마우스 오른쪽 버튼으로 저장하고, 백업은 복사해서 보관하세요.";
+}
+$("btn-png").onclick=async()=>{
+  if(!result) return;
+  try{
+    const url=await makePNG(result);
+    const fname=`학습자상_${result.nickname}_${result.label}.png`.replace(/[\\/:*?"<>|\s]+/g,"_");
+    openModal(`<h3 style="margin-bottom:10px">결과 이미지</h3><img src="${url}" alt="학습자상 레이더 결과 카드">
+      <p class="muted small-t">${canSave()?"아래 버튼으로 저장하거나, 이미지를 오른쪽 클릭해 저장하세요.":"이미지를 길게 누르거나 마우스 오른쪽 버튼을 눌러 저장하세요."}</p>
+      <div class="row">${canSave()?`<button class="btn primary" id="dl-png">PNG 저장</button>`:""}<button class="btn" data-close>닫기</button></div>`);
+    const d=$("dl-png"); if(d) d.onclick=async()=>{const ok=await saveFile(fname,await (await fetch(url)).blob());if(!ok)toast("이미지를 길게 누르거나 오른쪽 클릭해 저장해 주세요")};
+  }catch(e){toast(e.message)}
+};
+
+/* ---------- 기록 화면 ---------- */
+function sortedRecords(){return [...records].sort((a,b)=>new Date(b.date)-new Date(a.date))}
+function renderRecords(){
+  selected=selected.filter(id=>records.some(r=>r.id===id));
+  const list=$("reclist"), recs=sortedRecords();
+  if(!recs.length){
+    list.innerHTML=`<div class="empty">아직 저장한 기록이 없어요.<br>자기평가를 마치고 '기록 저장'을 누르면 여기에 쌓여요.
+      <div style="margin-top:14px"><button class="btn small" id="btn-sample">예시 기록 2개 넣어 보기</button></div></div>`;
+    $("btn-sample").onclick=addSamples;
+  }else{
+    if(!selected.length) selected=recs.slice(0,2).map(r=>r.id);
+    list.innerHTML=recs.map(r=>`<div class="rec ${selected.includes(r.id)?"sel":""}">
+      <label><input type="checkbox" data-id="${r.id}" ${selected.includes(r.id)?"checked":""}>
+        <span><b>${esc(r.label)}</b> · ${esc(r.nickname)}<br><span class="muted small-t">${dateStr(r.date)}${r.sample?" · 예시":""}</span></span></label>
+      <button class="btn small" data-open="${r.id}">보기</button>
+      <button class="btn small danger" data-del="${r.id}" aria-label="${esc(r.label)} 기록 지우기">지우기</button></div>`).join("");
+    list.querySelectorAll("input[type=checkbox]").forEach(cb=>cb.onchange=()=>{
+      const id=cb.dataset.id;
+      if(cb.checked){selected.push(id);if(selected.length>2)selected.shift()} else selected=selected.filter(x=>x!==id);
+      renderRecords();});
+    list.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{
+      result=JSON.parse(JSON.stringify(records.find(r=>r.id===b.dataset.open)));result.chosenGrowth=result.chosenGrowth||"";savedId=result.id;
+      renderResult(true);show("result");});
+    list.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>confirmBox("이 기록을 지울까요? 지우면 되돌릴 수 없어요.","지우기",()=>{
+      records=records.filter(r=>r.id!==b.dataset.del);persist();renderRecords();toast("기록을 지웠어요")}));
+  }
+  renderCompare();
+}
+function renderCompare(){
+  const sel=records.filter(r=>selected.includes(r.id)).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const box=$("cmp-chart"),leg=$("cmp-legend"),tb=$("cmp-table");
+  if(!sel.length){box.innerHTML=radarSVG([],{animate:false});leg.innerHTML="";tb.innerHTML=`<p class="muted">왼쪽에서 기록을 골라 주세요.</p>`;return}
+  const ds=sel.length===2
+    ?[{scores:sel[0].scores,stroke:"var(--muted)",dashed:true,interactive:true},{scores:sel[1].scores,stroke:"var(--ink)",fill:"var(--ink)",interactive:true}]
+    :[{scores:sel[0].scores,stroke:"var(--ink)",fill:"var(--ink)",interactive:true}];
+  box.innerHTML=radarSVG(ds,{aria:"기록 비교 레이더 차트"});
+  attachTips(box,(i,k)=>{const r=sel[k],p=PROFILES[i];return `<b>${esc(r.label)}</b> · ${esc(p.name)} ${fmt(r.scores[p.id])}점${r.evidence?.[p.id]?`<br>${esc(r.evidence[p.id])}`:""}`});
+  leg.innerHTML=sel.length===2
+    ?`<span><i style="border-color:var(--muted);border-top-style:dashed"></i>${esc(sel[0].label)} (${dateStr(sel[0].date)})</span><span><i style="border-color:var(--ink)"></i>${esc(sel[1].label)} (${dateStr(sel[1].date)})</span>`
+    :`<span><i style="border-color:var(--ink)"></i>${esc(sel[0].label)} (${dateStr(sel[0].date)})</span>`;
+  if(sel.length===2){
+    tb.innerHTML=`<table><thead><tr><th>학습자상</th><th class="n">${esc(sel[0].label)}</th><th class="n">${esc(sel[1].label)}</th><th class="n">변화</th></tr></thead><tbody>
+      ${PROFILES.map(p=>{const a=sel[0].scores[p.id],b=sel[1].scores[p.id],d=Math.round((b-a)*10)/10;
+        return `<tr><td><span class="dot" style="background:${p.color};display:inline-block;margin-right:6px"></span>${esc(p.name)}</td><td class="n">${fmt(a)}</td><td class="n">${fmt(b)}</td>
+        <td class="n ${d>0?"up":d<0?"down":""}">${d>0?"▲ +"+fmt(d):d<0?"▼ −"+fmt(-d):"= 0"}</td></tr>`}).join("")}</tbody></table>`;
+  }else tb.innerHTML=`<p class="muted small-t">기록을 하나 더 고르면 축별 변화가 표로 나와요.</p>`;
+}
+function addSamples(){
+  const mk=(label,daysAgo,vals,goal)=>{const scores={},items={},evidence={};PROFILES.forEach((p,i)=>{scores[p.id]=vals[i];items[p.id]=[vals[i]];evidence[p.id]=""});
+    return {id:"sample-"+label,nickname:"예시 학생",label,date:new Date(Date.now()-daysAgo*864e5).toISOString(),scores,items,evidence,reflections:{},goal,sample:true}};
+  records.push(mk("단원 시작",30,[3,2,3,2,4,3,4,2,3,2],"모둠 활동에서 내 생각을 한 번 이상 말해 볼래요"));
+  records.push(mk("단원 끝",1,[4,3,3,4,4,4,4,3,3,4],"새로운 발표 방법에 도전해 볼래요"));
+  persist();selected=[];renderRecords();toast("예시 기록을 넣었어요. 필요 없으면 지우면 돼요");
+}
+function confirmBox(msg,okText,onOk){
+  openModal(`<h3 style="margin-bottom:10px">확인해 주세요</h3><p>${esc(msg)}</p><div class="row"><button class="btn danger" id="cf-ok">${esc(okText)}</button><button class="btn" data-close>취소</button></div>`);
+  $("cf-ok").onclick=()=>{closeModal();onOk()};
+}
+$("btn-clear").onclick=()=>{
+  if(!records.length){toast("지울 기록이 없어요");return}
+  confirmBox(`이 기기에 저장된 기록 ${records.length}개를 모두 지울까요? 필요하면 먼저 JSON 백업을 해 두세요.`,"모두 지우기",()=>{records=[];selected=[];persist();renderRecords();toast("모든 기록을 지웠어요")});
+};
+
+/* ---------- 백업·불러오기 ---------- */
+function exportJSON(){return JSON.stringify({app:"learner-profile-radar",version:1,exportedAt:new Date().toISOString(),records},null,2)}
+function parseRecords(text){
+  const data=JSON.parse(text); const arr=Array.isArray(data)?data:data.records;
+  if(!Array.isArray(arr)) throw new Error("학습자상 레이더 백업 파일이 아니에요");
+  return arr.filter(r=>r&&r.id&&r.scores&&PROFILES.every(p=>typeof r.scores[p.id]==="number"));
+}
+function mergeRecords(arr){
+  let added=0; arr.forEach(r=>{if(!records.some(x=>x.id===r.id)){records.push({evidence:{},reflections:{},goal:"",...r});added++}});
+  persist();renderRecords();toast(added?`기록 ${added}개를 불러왔어요`:"새로 불러올 기록이 없어요 (이미 있는 기록이에요)");
+}
+$("btn-export").onclick=()=>{
+  if(!records.length){toast("백업할 기록이 없어요");return}
+  const text=exportJSON(), nick=(records[records.length-1].nickname||"기록").replace(/[\\/:*?"<>|\s]+/g,"_");
+  if(canSave()){saveFile(`학습자상기록_${nick}.json`,new Blob([text],{type:"application/json"})).then(ok=>{if(!ok)showCopyExport(text)});return}
+  showCopyExport(text);
+};
+function showCopyExport(text){
+  openModal(`<h3 style="margin-bottom:8px">JSON 백업</h3><p class="muted small-t">아래 내용을 복사해 메모장에 붙여넣고 '학습자상기록.json' 같은 이름으로 저장하세요. 선생님께 보낼 때도 이 내용을 그대로 보내면 돼요.</p>
+    <textarea class="inp" id="exp-text" style="min-height:220px;font-size:13px" readonly>${esc(text)}</textarea>
+    <div class="row" style="margin-top:10px"><button class="btn primary" id="exp-copy">복사하기</button><button class="btn" data-close>닫기</button></div>`);
+  $("exp-copy").onclick=()=>{const ta=$("exp-text");
+    navigator.clipboard.writeText(text).then(()=>toast("복사했어요")).catch(()=>{ta.focus();ta.select();toast("선택된 내용을 Ctrl+C로 복사하세요")});};
+}
+$("btn-import").onclick=()=>{
+  openModal(`<h3 style="margin-bottom:8px">기록 불러오기</h3><p class="muted small-t">백업한 JSON 파일을 고르거나, 복사해 둔 내용을 붙여넣으세요. 이미 있는 기록은 겹쳐 저장하지 않아요.</p>
+    <div class="row"><button class="btn primary" id="imp-file">JSON 파일 고르기</button></div>
+    <label class="f" for="imp-text" style="margin-top:14px">또는 붙여넣기</label>
+    <textarea class="inp" id="imp-text" style="min-height:140px;font-size:13px" placeholder='{"app":"learner-profile-radar", ...}'></textarea>
+    <div class="row" style="margin-top:10px"><button class="btn" id="imp-go">붙여넣은 내용 불러오기</button><button class="btn" data-close>닫기</button></div>`);
+  $("imp-file").onclick=()=>$("file-import").click();
+  $("imp-go").onclick=()=>{try{mergeRecords(parseRecords($("imp-text").value));closeModal()}catch(e){toast(e.message.includes("JSON")?"내용을 읽을 수 없어요. 백업 내용을 빠짐없이 붙여넣었는지 확인해 주세요":e.message)}};
+};
+$("file-import").onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  f.text().then(t=>{mergeRecords(parseRecords(t));closeModal()}).catch(err=>toast(err instanceof SyntaxError?"파일을 읽을 수 없어요. 백업한 JSON 파일인지 확인해 주세요":err.message));
+  e.target.value="";
+};
+
+/* ---------- 교사 모드 ---------- */
+let teacherRecs=[];
+$("btn-teacher-files").onclick=()=>$("file-teacher").click();
+$("file-teacher").onchange=async e=>{
+  const files=[...e.target.files]; teacherRecs=[]; let bad=0;
+  for(const f of files){try{parseRecords(await f.text()).forEach(r=>{if(!teacherRecs.some(x=>x.id===r.id))teacherRecs.push(r)})}catch(err){bad++}}
+  e.target.value="";
+  const labels=[...new Set(teacherRecs.map(r=>r.label))];
+  const sel=$("teacher-label"); sel.hidden=!teacherRecs.length;
+  sel.innerHTML=`<option value="">모든 시점</option>`+labels.map(l=>`<option>${esc(l)}</option>`).join("");
+  renderTeacher(bad);
+};
+$("teacher-label").onchange=()=>renderTeacher(0);
+function renderTeacher(bad){
+  const out=$("teacher-out"), lab=$("teacher-label").value;
+  const recs=teacherRecs.filter(r=>!lab||r.label===lab);
+  if(!recs.length){out.innerHTML=`<p class="muted">${bad?`읽지 못한 파일이 ${bad}개 있어요. `:""}불러온 기록이 없어요.</p>`;return}
+  const mean={}; PROFILES.forEach(p=>mean[p.id]=Math.round(recs.reduce((s,r)=>s+r.scores[p.id],0)/recs.length*10)/10);
+  const students=new Set(recs.map(r=>r.nickname)).size;
+  out.innerHTML=`<div class="resgrid"><div class="chartbox" id="t-chart">${radarSVG([{scores:mean,stroke:"var(--ink)",fill:"var(--ink)",interactive:true}],{aria:"학급 평균 레이더 차트"})}</div>
+    <div><p><b>학생 ${students}명 · 기록 ${recs.length}개</b>${lab?` · ${esc(lab)}`:""}${bad?`<br><span class="muted small-t">읽지 못한 파일 ${bad}개는 빼고 계산했어요.</span>`:""}</p>
+    <div class="tablewrap"><table><thead><tr><th>학습자상</th><th class="n">학급 평균</th></tr></thead><tbody>
+    ${PROFILES.map(p=>`<tr><td><span class="dot" style="background:${p.color};display:inline-block;margin-right:6px"></span>${esc(p.name)}</td><td class="n">${fmt(mean[p.id])}</td></tr>`).join("")}</tbody></table></div></div></div>`;
+  attachTips($("t-chart"),i=>`<b>${esc(PROFILES[i].name)}</b> 학급 평균 ${fmt(mean[PROFILES[i].id])}점`);
+}
+
+/* ---------- 시작 ---------- */
+loadRecords();
+updateFrameNote();
+renderStart();
+show("start");
+</script>
