@@ -1,0 +1,171 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>초학문적 주제 분류 게임</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Gowun+Dodum&display=swap">
+<style>
+/* Layout: 위 점수판 → 가운데 현재 카드 한 장 → 아래 6개 주제 칸(누르면 분류) → 분류 결과 */
+:root{
+  --bg:#eef2f3; --paper:#fbfcfc; --ink:#1f2d33; --muted:#5d6f76; --line:#c9d6da;
+  --accent:#0f6e7a; --accent-ink:#fff; --good:#2f8a5c; --bad:#c4553a;
+  --t1:#c9821a; --t2:#8a6a3a; --t3:#c4458a; --t4:#3a68c4; --t5:#7b55b0; --t6:#2f8a5c;
+  --display:"Do Hyeon","Gowun Dodum",system-ui,sans-serif;
+  --body:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141b1e; --paper:#1b2427; --ink:#e4ecee; --muted:#9db0b6; --line:#2f3e43;
+  --accent:#4fc0cc; --accent-ink:#0d1a1d; --good:#5cc08c; --bad:#e8836a;
+  --t1:#e3a64a; --t2:#c9a46a; --t3:#e57ab3; --t4:#7c9fe8; --t5:#a988d8; --t6:#5cc08c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141b1e; --paper:#1b2427; --ink:#e4ecee; --muted:#9db0b6; --line:#2f3e43;
+  --accent:#4fc0cc; --accent-ink:#0d1a1d; --good:#5cc08c; --bad:#e8836a;
+  --t1:#e3a64a; --t2:#c9a46a; --t3:#e57ab3; --t4:#7c9fe8; --t5:#a988d8; --t6:#5cc08c; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55}
+.wrap{max-width:1040px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance}
+.eyebrow{font-size:12px;letter-spacing:.08em;color:var(--muted)}
+header{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:end}
+header h1{font-size:32px;line-height:1.1}
+header p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.score{display:flex;gap:18px;font-variant-numeric:tabular-nums}
+.score div{display:flex;flex-direction:column;align-items:flex-end}
+.score b{font-family:var(--display);font-weight:400;font-size:28px;line-height:1}
+.score span{font-size:12px;color:var(--muted)}
+.progress{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent);transition:width .3s}
+.stage{display:grid;place-items:center;padding:10px 0}
+.qcard{width:min(520px,100%);background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:22px 22px 18px;box-shadow:0 4px 18px rgba(0,0,0,.07);display:flex;flex-direction:column;gap:10px}
+.qcard .kind{font-size:12px;color:var(--muted);letter-spacing:.06em}
+.qcard .txt{font-family:var(--display);font-size:26px;line-height:1.35;text-wrap:balance}
+.fb{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--c);}
+.fb b{font-family:var(--display);font-weight:400;font-size:18px;color:var(--c);display:block}
+.themes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:720px){.themes{grid-template-columns:repeat(2,1fr)}}
+.th{font:inherit;text-align:left;border:1px solid var(--line);border-top:5px solid var(--c);background:var(--paper);color:var(--ink);border-radius:8px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:3px;min-width:0}
+.th b{font-family:var(--display);font-weight:400;font-size:18px;line-height:1.25}
+.th span{font-size:12px;color:var(--muted)}
+.th em{font-style:normal;font-size:12px;color:var(--c)}
+.th:hover:not(:disabled){border-color:var(--c)}
+.th:disabled{cursor:default}
+.th.right{background:color-mix(in srgb,var(--c) 14%,var(--paper));border-color:var(--c)}
+.th.wrong{outline:2px dashed var(--bad);outline-offset:-2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.btn{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:6px;padding:9px 16px;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.result{display:flex;flex-direction:column;gap:12px}
+.result h2{font-size:26px}
+.list{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px}
+.list div{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--c);border-radius:6px;padding:8px 10px;font-size:14px}
+.list small{color:var(--muted);display:block}
+.mark{font-weight:700}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:6px;font-size:14px}
+@media (prefers-reduced-motion:reduce){.progress i{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">IB PYP · 6가지 초학문적 주제</div>
+      <h1>초학문적 주제 분류 게임</h1>
+      <p>카드를 읽고 가장 잘 어울리는 주제를 골라요. 두 주제에 걸치는 카드도 있어요.</p>
+    </div>
+    <div class="score"><div><b id="sc">0</b><span>점수</span></div><div><b id="nm">1/12</b><span>카드</span></div></div>
+  </header>
+  <div class="progress"><i id="bar" style="width:0"></i></div>
+
+  <div id="play">
+    <div class="stage"><div class="qcard" aria-live="polite">
+      <div class="kind" id="kind"></div>
+      <div class="txt" id="txt"></div>
+      <div id="fb"></div>
+    </div></div>
+    <div class="themes" id="themes"></div>
+    <div class="row" style="margin-top:14px"><button class="btn primary" id="next" type="button" hidden>다음 카드</button></div>
+  </div>
+
+  <section class="result" id="result" hidden>
+    <h2 id="rt"></h2>
+    <p id="rp" style="margin:0;color:var(--muted)"></p>
+    <div class="list" id="rlist"></div>
+    <div class="row"><button class="btn" id="copy" type="button">결과 텍스트로 복사</button><button class="btn primary" id="again" type="button">새 카드로 다시 하기</button></div>
+    <textarea id="fallback" rows="8" hidden readonly aria-label="복사할 텍스트" style="width:100%;font:inherit"></textarea>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const TH=[
+ {k:"who",n:"우리는 누구인가",d:"나와 정체성, 건강, 관계, 가치와 믿음",c:"var(--t1)"},
+ {k:"place",n:"우리가 속한 시간과 공간",d:"역사, 이주와 탐험, 장소와 지도",c:"var(--t2)"},
+ {k:"express",n:"우리 자신을 표현하는 방법",d:"생각·감정·문화를 표현하는 예술과 창작",c:"var(--t3)"},
+ {k:"world",n:"세계가 돌아가는 방식",d:"자연 세계의 법칙, 과학과 기술",c:"var(--t4)"},
+ {k:"org",n:"우리 자신을 조직하는 방법",d:"사회 제도, 경제, 공동체의 의사결정",c:"var(--t5)"},
+ {k:"planet",n:"우리 모두의 지구",d:"자원 공유, 환경, 평화와 갈등 해결",c:"var(--t6)"}
+];
+// a: 가장 알맞은 주제, b: 함께 인정하는 주제(부분 점수)
+const CARDS=[
+ {t:"나는 어떤 일을 할 때 가장 즐거울까?",a:"who",w:"나 자신의 특성과 정체성을 탐구해요."},
+ {t:"골고루 먹고 충분히 자는 것이 왜 중요할까?",a:"who",b:["world"],w:"몸과 마음의 건강은 '우리는 누구인가'에서 다뤄요. 몸의 원리로 보면 '세계가 돌아가는 방식'과도 이어져요."},
+ {t:"친구와 다퉜을 때 다시 친해지는 방법",a:"who",b:["planet"],w:"관계와 우정은 '우리는 누구인가'의 중심 내용이에요. 갈등 해결로 보면 '우리 모두의 지구'와도 닿아요."},
+ {t:"옛날 우리 고장 사람들은 어떻게 살았을까?",a:"place",w:"과거와 역사, 시간의 흐름을 탐구해요."},
+ {t:"사람들은 왜 다른 나라로 이사를 갈까?",a:"place",b:["org"],w:"이주와 이동은 '시간과 공간'의 대표 주제예요."},
+ {t:"지도로 우리 마을의 위치를 나타내기",a:"place",w:"장소와 공간을 표현하는 지도는 '시간과 공간'에서 다뤄요."},
+ {t:"광고는 우리 마음을 어떻게 움직일까?",a:"express",b:["org"],w:"광고는 메시지를 전달하는 표현 방식이에요. 상품 판매로 보면 경제('조직')와도 연결돼요."},
+ {t:"난타 공연으로 우리 반의 이야기를 표현하기",a:"express",w:"음악과 공연으로 생각과 감정을 표현해요."},
+ {t:"명절 풍습에 담긴 우리 문화",a:"express",b:["place"],w:"문화와 전통을 표현하는 방식으로 볼 수 있어요. 역사 속 변화로 보면 '시간과 공간'과도 이어져요."},
+ {t:"물은 왜 얼음이 되거나 수증기가 될까?",a:"world",w:"물질의 상태 변화라는 자연의 원리를 탐구해요."},
+ {t:"자석은 어떻게 물체를 끌어당길까?",a:"world",w:"자연 세계의 과학 원리예요."},
+ {t:"인공지능은 어떻게 사람의 말을 알아들을까?",a:"world",b:["org"],w:"기술이 작동하는 원리는 '세계가 돌아가는 방식'이에요. 사회에서 AI를 쓰는 규칙을 다루면 '조직'이 돼요."},
+ {t:"우리 마을의 문제를 주민들이 함께 해결하는 방법",a:"org",w:"주민 참여와 민주적 의사결정은 '우리 자신을 조직하는 방법'이에요."},
+ {t:"우리 반 규칙은 어떻게 정해야 할까?",a:"org",w:"공동체의 규칙과 제도를 만드는 과정이에요."},
+ {t:"한정된 용돈으로 합리적으로 선택하기",a:"org",w:"생산·소비 같은 경제 활동은 '조직' 주제에서 다뤄요."},
+ {t:"쓰레기를 줄이려면 어떻게 해야 할까?",a:"planet",b:["org"],w:"환경과 자원을 지키는 책임은 '우리 모두의 지구'예요."},
+ {t:"가뭄 때 지역마다 물을 어떻게 나눠 써야 할까?",a:"planet",b:["org"],w:"한정된 자원을 공평하게 나누는 문제예요."},
+ {t:"멸종 위기 동물을 지키는 방법",a:"planet",b:["world"],w:"생물 다양성과 환경 보호는 '지구' 주제예요. 생태계 원리로 보면 '세계가 돌아가는 방식'과도 이어져요."}
+];
+const ROUND=12;
+const $=id=>document.getElementById(id);
+let deck=[],i=0,score=0,log=[],answered=false;
+function shuffle(a){a=[...a];for(let j=a.length-1;j>0;j--){const r=Math.floor(Math.random()*(j+1));[a[j],a[r]]=[a[r],a[j]]}return a}
+const th=k=>TH.find(t=>t.k===k);
+function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,1800)}
+function start(){deck=shuffle(CARDS).slice(0,ROUND);i=0;score=0;log=[];$("result").hidden=true;$("play").hidden=false;show()}
+function show(){
+ answered=false;const c=deck[i];
+ $("kind").textContent=`탐구 카드 ${i+1}`;$("txt").textContent=c.t;$("fb").innerHTML="";$("next").hidden=true;
+ $("sc").textContent=score;$("nm").textContent=`${i+1}/${deck.length}`;$("bar").style.width=(i/deck.length*100)+"%";
+ $("themes").innerHTML=TH.map(t=>`<button class="th" type="button" style="--c:${t.c}" data-k="${t.k}"><b>${t.n}</b><span>${t.d}</span></button>`).join("");
+}
+$("themes").onclick=e=>{
+ const b=e.target.closest("button");if(!b||answered)return;answered=true;
+ const c=deck[i],k=b.dataset.k;let pts=0,lab,col;
+ if(k===c.a){pts=2;lab="딱 맞아요! +2";col="var(--good)"}
+ else if((c.b||[]).includes(k)){pts=1;lab="그렇게 볼 수도 있어요 +1";col="var(--accent)"}
+ else{lab="다시 생각해 봐요";col="var(--bad)"}
+ score+=pts;log.push({c,k,pts});
+ document.querySelectorAll(".th").forEach(x=>{x.disabled=true;const kk=x.dataset.k;
+  if(kk===c.a){x.classList.add("right");x.insertAdjacentHTML("beforeend","<em>가장 알맞은 주제</em>")}
+  else if((c.b||[]).includes(kk)){x.insertAdjacentHTML("beforeend","<em>함께 볼 수 있는 주제</em>")}
+  if(kk===k&&pts===0)x.classList.add("wrong")});
+ $("fb").innerHTML=`<div class="fb" style="--c:${col}"><b>${lab}</b>${c.w}</div>`;
+ $("sc").textContent=score;$("next").hidden=false;$("next").textContent=i+1<deck.length?"다음 카드":"결과 보기";$("next").focus();
+};
+$("next").onclick=()=>{i++;if(i<deck.length)show();else finish()};
+function finish(){
+ $("bar").style.width="100%";$("play").hidden=true;$("result").hidden=false;
+ const max=deck.length*2,exact=log.filter(l=>l.pts===2).length,part=log.filter(l=>l.pts===1).length;
+ $("rt").textContent=`${score}점 / ${max}점`;
+ $("rp").textContent=`딱 맞힌 카드 ${exact}장, 다른 관점으로 본 카드 ${part}장. 헷갈렸던 카드는 친구와 왜 그 주제라고 생각했는지 이야기해 보세요.`;
+ $("rlist").innerHTML=log.map(l=>`<div style="--c:${th(l.c.a).c}"><span class="mark" style="color:${l.pts===2?"var(--good)":l.pts?"var(--accent)":"var(--bad)"}">${l.pts===2?"○":l.pts?"△":"×"}</span> ${l.c.t}<small>내 선택: ${th(l.k).n} · 알맞은 주제: ${th(l.c.a).n}</small></div>`).join("");
+ $("again").focus();
+}
+$("again").onclick=start;
+$("copy").onclick=()=>{
+ const t=`[초학문적 주제 분류 게임] ${score}점 / ${deck.length*2}점\n`+log.map(l=>`${l.pts===2?"○":l.pts?"△":"×"} ${l.c.t} → 내 선택: ${th(l.k).n} / 알맞은 주제: ${th(l.c.a).n}`).join("\n");
+ const fb=$("fallback");const fail=()=>{fb.value=t;fb.hidden=false;fb.focus();fb.select();toast("아래 글을 직접 복사해 주세요")};
+ try{navigator.clipboard.writeText(t).then(()=>{fb.hidden=true;toast("복사했어요")},fail)}catch(e){fail()}
+};
+start();
+</script>
+
+</body></html>

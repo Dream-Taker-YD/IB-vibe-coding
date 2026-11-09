@@ -1,0 +1,161 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>ATL 기능 자기점검</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Gowun+Dodum&display=swap">
+<style>
+/* Layout: 위 요약(5개 기능 막대) → 기능별 점검 카드 → 다음 목표 세우기 */
+:root{
+  --bg:#eef2f3; --paper:#fbfcfc; --ink:#1f2d33; --muted:#5d6f76; --line:#c9d6da; --track:#e2eaec;
+  --accent:#0f6e7a; --accent-ink:#fff;
+  --k1:#c9821a; --k2:#2f8a5c; --k3:#3a68c4; --k4:#c4553a; --k5:#7b55b0;
+  --display:"Do Hyeon","Gowun Dodum",system-ui,sans-serif;
+  --body:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141b1e; --paper:#1b2427; --ink:#e4ecee; --muted:#9db0b6; --line:#2f3e43; --track:#26343a;
+  --accent:#4fc0cc; --accent-ink:#0d1a1d;
+  --k1:#e3a64a; --k2:#5cc08c; --k3:#7c9fe8; --k4:#e8836a; --k5:#a988d8; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141b1e; --paper:#1b2427; --ink:#e4ecee; --muted:#9db0b6; --line:#2f3e43; --track:#26343a;
+  --accent:#4fc0cc; --accent-ink:#0d1a1d;
+  --k1:#e3a64a; --k2:#5cc08c; --k3:#7c9fe8; --k4:#e8836a; --k5:#a988d8; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55}
+.wrap{max-width:1040px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance}
+.eyebrow{font-size:12px;letter-spacing:.08em;color:var(--muted)}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:end}
+header h1{font-size:32px;line-height:1.1}
+header p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:end}
+.field{display:flex;flex-direction:column;gap:3px}
+label{font-size:12px;color:var(--muted)}
+input,textarea{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%}
+input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:6px;padding:8px 12px;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.summary{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:720px){.summary{grid-template-columns:1fr}}
+.bars{display:flex;flex-direction:column;gap:10px}
+.bar{display:grid;grid-template-columns:86px 1fr 44px;gap:10px;align-items:center;font-size:14px}
+.bar .t{height:14px;background:var(--track);border-radius:7px;overflow:hidden}
+.bar .f{height:100%;background:var(--c);border-radius:7px;transition:width .3s}
+.bar .v{font-variant-numeric:tabular-nums;text-align:right;color:var(--muted)}
+.insight{display:flex;flex-direction:column;gap:10px;font-size:14px}
+.insight .box{border-left:3px solid var(--c,var(--accent));padding:4px 0 4px 12px}
+.insight b{font-family:var(--display);font-weight:400;font-size:17px;display:block}
+.badge{font-size:12px;padding:2px 8px;border-radius:99px;border:1px dashed var(--muted);color:var(--muted);vertical-align:middle}
+.scale{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.cats{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.cat{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.cat h3{font-size:21px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.cat h3 small{font-family:var(--body);font-size:12px;color:var(--muted)}
+.item{display:flex;flex-direction:column;gap:5px}
+.item p{margin:0;font-size:14px}
+.lv{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.lv button{font:inherit;font-size:12px;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:5px;padding:5px 2px;cursor:pointer}
+.lv button[aria-pressed="true"]{background:var(--c);border-color:var(--c);color:#fff}
+.goal{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.goal h2{font-size:24px}
+.pick{display:flex;flex-wrap:wrap;gap:6px}
+.pick button{font:inherit;font-size:13px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:99px;padding:4px 10px;cursor:pointer;text-align:left}
+.pick button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:6px;font-size:14px}
+@media (prefers-reduced-motion:reduce){.bar .f{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">IB PYP · 접근 학습 기능(ATL)</div>
+      <h1>ATL 기능 자기점검</h1>
+      <p>다섯 가지 학습 기능을 돌아보고 다음에 키울 기능을 정해요.</p>
+    </div>
+    <div class="row">
+      <div class="field"><label for="who">이름</label><input id="who" placeholder="이름"></div>
+      <div class="field"><label for="unit">탐구 단원</label><input id="unit" placeholder="예: 우리 지역의 문제"></div>
+    </div>
+  </header>
+
+  <section class="summary" aria-live="polite">
+    <div class="bars" id="bars"></div>
+    <div class="insight" id="insight"></div>
+  </section>
+
+  <div class="scale"><span>1 아직 어려워요</span><span>2 가끔 해요</span><span>3 자주 해요</span><span>4 스스로 잘해요</span></div>
+  <section class="cats" id="cats"></section>
+
+  <section class="goal">
+    <h2>다음 목표 세우기</h2>
+    <p style="margin:0;color:var(--muted);font-size:14px">더 키우고 싶은 행동 하나를 고르고, 어떻게 연습할지 써 보세요.</p>
+    <div class="pick" id="pick"></div>
+    <div class="field"><label for="plan">이렇게 연습할래요</label><textarea id="plan" rows="3" placeholder="예: 모둠 토의에서 친구 말을 끝까지 듣고 한 번씩 되물어 볼래요."></textarea></div>
+    <div class="row">
+      <button class="btn" id="reset" type="button">모두 지우기</button>
+      <button class="btn primary" id="copy" type="button">텍스트로 복사</button>
+    </div>
+    <div id="confirm" hidden class="row" style="font-size:14px">정말 모두 지울까요? <button class="btn" id="yes" type="button">지우기</button><button class="btn" id="no" type="button">취소</button></div>
+    <textarea id="fallback" rows="8" hidden readonly aria-label="복사할 텍스트"></textarea>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const CATS=[
+ {k:"think",n:"사고 기능",en:"Thinking",c:"var(--k1)",items:["여러 가지 방법으로 문제를 해결해 봐요.","왜 그런지 이유를 따져 보며 생각해요.","새롭고 독창적인 아이디어를 떠올려요."]},
+ {k:"comm",n:"의사소통 기능",en:"Communication",c:"var(--k2)",items:["친구의 말을 끝까지 주의 깊게 들어요.","내 생각을 분명하게 말하거나 글로 써요.","상황과 듣는 사람에 맞게 표현해요."]},
+ {k:"social",n:"사회적 기능",en:"Social",c:"var(--k3)",items:["모둠에서 맡은 역할을 책임감 있게 해요.","의견이 다를 때 존중하며 해결해요.","친구를 돕고 함께 성공하려고 해요."]},
+ {k:"self",n:"자기관리 기능",en:"Self-management",c:"var(--k4)",items:["시간과 준비물을 스스로 챙겨요.","속상할 때 마음을 가라앉히는 방법을 써요.","어려워도 포기하지 않고 끝까지 해요."]},
+ {k:"research",n:"조사 기능",en:"Research",c:"var(--k5)",items:["궁금한 것을 탐구 질문으로 만들어요.","여러 자료에서 필요한 정보를 찾아요.","믿을 만한 자료인지 확인해요."]}
+];
+const LV=["아직","가끔","자주","잘해요"];
+const KEY="atl-self-check-v1";
+const SAMPLE={who:"",unit:"우리 지역의 문제",sample:true,s:{think:[3,3,2],comm:[2,3,3],social:[4,3,4],self:[2,2,3],research:[3,2,1]},goal:"research-2",plan:""};
+let st;try{st=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+if(!st)st=JSON.parse(JSON.stringify(SAMPLE));
+const $=id=>document.getElementById(id);
+function save(){try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}}
+function unsample(){if(st.sample){st.sample=false}}
+function avg(k){const a=(st.s[k]||[]).filter(Boolean);return a.length?a.reduce((x,y)=>x+y,0)/a.length:0}
+function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,1800)}
+
+function renderSummary(){
+ $("bars").innerHTML=CATS.map(c=>{const a=avg(c.k);return `<div class="bar" style="--c:${c.c}"><span>${c.n.replace(" 기능","")}</span><div class="t"><div class="f" style="width:${a/4*100}%"></div></div><span class="v">${a?a.toFixed(1):"–"}</span></div>`}).join("");
+ const done=CATS.filter(c=>avg(c.k));
+ if(!done.length){$("insight").innerHTML='<div class="box"><b>점검을 시작해 보세요</b>아래 문장마다 나에게 맞는 단계를 눌러요.</div>';return}
+ const hi=[...done].sort((a,b)=>avg(b.k)-avg(a.k))[0],lo=[...done].sort((a,b)=>avg(a.k)-avg(b.k))[0];
+ $("insight").innerHTML=(st.sample?'<span class="badge">예시 응답</span>':"")+
+  `<div class="box" style="--c:${hi.c}"><b>나의 강점: ${hi.n}</b>이 기능을 친구들과 함께하는 활동에서 더 발휘해 보세요.</div>`+
+  (hi!==lo?`<div class="box" style="--c:${lo.c}"><b>키워 볼 기능: ${lo.n}</b>아래 '다음 목표'에서 이 기능의 행동을 하나 골라 보세요.</div>`:"");
+}
+function renderCats(){
+ $("cats").innerHTML=CATS.map(c=>`<div class="cat" style="--c:${c.c}"><h3>${c.n}<small>${c.en}</small></h3>${c.items.map((t,i)=>`
+  <div class="item"><p>${t}</p><div class="lv" role="group" aria-label="${t}">${LV.map((l,v)=>`<button type="button" data-k="${c.k}" data-i="${i}" data-v="${v+1}" aria-pressed="${(st.s[c.k]||[])[i]===v+1}">${v+1} ${l}</button>`).join("")}</div></div>`).join("")}</div>`).join("");
+}
+function renderPick(){
+ const done=CATS.filter(c=>avg(c.k));const order=[...done].sort((a,b)=>avg(a.k)-avg(b.k));
+ const list=[];order.forEach(c=>c.items.forEach((t,i)=>{if((st.s[c.k][i]||0)<=2)list.push({id:c.k+"-"+i,t,c})}));
+ if(!list.length)CATS.forEach(c=>c.items.forEach((t,i)=>list.push({id:c.k+"-"+i,t,c})));
+ $("pick").innerHTML=list.map(x=>`<button type="button" data-g="${x.id}" aria-pressed="${st.goal===x.id}">${x.t}</button>`).join("");
+}
+function render(){renderSummary();renderCats();renderPick();$("who").value=st.who||"";$("unit").value=st.unit||"";$("plan").value=st.plan||"";save()}
+
+$("cats").onclick=e=>{const b=e.target.closest("button");if(!b)return;unsample();const k=b.dataset.k;st.s[k]=st.s[k]||[0,0,0];st.s[k][+b.dataset.i]=+b.dataset.v;renderSummary();renderCats();renderPick();save()};
+$("pick").onclick=e=>{const b=e.target.closest("button");if(!b)return;unsample();st.goal=b.dataset.g;renderPick();renderSummary();save()};
+["who","unit","plan"].forEach(id=>$(id).oninput=e=>{st[id]=e.target.value;if(id!=="unit")unsample();renderSummary();save()});
+$("reset").onclick=()=>$("confirm").hidden=false;
+$("no").onclick=()=>$("confirm").hidden=true;
+$("yes").onclick=()=>{st={who:"",unit:"",sample:false,s:{},goal:"",plan:""};$("confirm").hidden=true;render();toast("모두 지웠어요")};
+$("copy").onclick=()=>{
+ let t=`[ATL 기능 자기점검] ${st.who||""}${st.unit?" / "+st.unit:""}\n`;
+ CATS.forEach(c=>{t+=`\n■ ${c.n} (평균 ${avg(c.k)?avg(c.k).toFixed(1):"-"})\n`;c.items.forEach((it,i)=>{const v=(st.s[c.k]||[])[i];t+=`- ${it} : ${v?v+" "+LV[v-1]:"미응답"}\n`})});
+ const g=st.goal&&st.goal.split("-");if(g){const c=CATS.find(x=>x.k===g[0]);if(c)t+=`\n■ 다음 목표 (${c.n})\n- ${c.items[+g[1]]}\n`}
+ if(st.plan)t+=`- 연습 방법: ${st.plan}\n`;
+ const fb=$("fallback");
+ const fail=()=>{fb.value=t;fb.hidden=false;fb.focus();fb.select();toast("아래 글을 직접 복사해 주세요")};
+ try{navigator.clipboard.writeText(t).then(()=>{fb.hidden=true;toast("복사했어요")},fail)}catch(e){fail()}
+};
+render();
+</script>
+
+</body></html>
