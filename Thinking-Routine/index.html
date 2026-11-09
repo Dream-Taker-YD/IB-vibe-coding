@@ -1,0 +1,218 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>생각 루틴 보드</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Gowun+Dodum&display=swap">
+<style>
+/* Layout: 왼쪽 루틴 선택 레일 + 오른쪽 모눈종이 보드(단계별 열에 포스트잇) */
+:root{
+  --bg:#eef2f3; --paper:#fbfcfc; --grid:#dbe5e8; --ink:#1f2d33; --muted:#5d6f76; --line:#c9d6da;
+  --accent:#0f6e7a; --accent-ink:#ffffff;
+  --n1:#ffe69a; --n2:#c8ecd8; --n3:#d5e3ff; --n4:#ffd4c8; --note-ink:#2a2a22;
+  --display:"Do Hyeon","Gowun Dodum",system-ui,sans-serif;
+  --body:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141b1e; --paper:#1b2427; --grid:#243135; --ink:#e4ecee; --muted:#9db0b6; --line:#2f3e43;
+  --accent:#4fc0cc; --accent-ink:#0d1a1d;
+  --n1:#5c4f1f; --n2:#22493a; --n3:#2a3b5e; --n4:#5a3329; --note-ink:#f1ede0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141b1e; --paper:#1b2427; --grid:#243135; --ink:#e4ecee; --muted:#9db0b6; --line:#2f3e43;
+  --accent:#4fc0cc; --accent-ink:#0d1a1d;
+  --n1:#5c4f1f; --n2:#22493a; --n3:#2a3b5e; --n4:#5a3329; --note-ink:#f1ede0; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55}
+.wrap{max-width:1280px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;grid-template-columns:260px 1fr;gap:20px}
+@media (max-width:860px){.wrap{grid-template-columns:1fr}}
+h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance}
+.rail{display:flex;flex-direction:column;gap:14px;min-width:0}
+.brand h1{font-size:30px;line-height:1.1}
+.brand p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.eyebrow{font-size:12px;letter-spacing:.08em;color:var(--muted)}
+.routines{display:flex;flex-direction:column;gap:6px}
+@media (max-width:860px){.routines{flex-direction:row;overflow-x:auto;padding-bottom:4px}.routines button{flex:0 0 auto;width:auto}}
+.routines button{font:inherit;text-align:left;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:8px;padding:9px 12px;cursor:pointer;width:100%}
+.routines button b{display:block;font-family:var(--display);font-weight:400;font-size:17px}
+.routines button span{font-size:12px;color:var(--muted)}
+.routines button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.routines button[aria-pressed="true"] span{color:var(--accent-ink);opacity:.85}
+.tip{border-left:3px solid var(--accent);padding:6px 0 6px 12px;font-size:13px;color:var(--muted)}
+.tip strong{color:var(--ink);display:block;font-weight:400;font-family:var(--display);font-size:15px}
+main{min-width:0;display:flex;flex-direction:column;gap:14px}
+.head{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.head .field{display:flex;flex-direction:column;gap:3px;flex:1 1 220px;min-width:0}
+.head .field.small{flex:0 1 140px}
+label{font-size:12px;color:var(--muted);letter-spacing:.04em}
+input,textarea{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%}
+input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:6px;padding:8px 12px;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:hover{border-color:var(--accent)}
+.board{background-color:var(--paper);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;border:1px solid var(--line);border-radius:10px;padding:16px}
+.board-title{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline;margin-bottom:12px}
+.board-title h2{font-size:26px}
+.board-title .stim{color:var(--muted);font-size:14px}
+.badge{font-size:12px;padding:2px 8px;border-radius:99px;border:1px dashed var(--muted);color:var(--muted)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.col{display:flex;flex-direction:column;gap:8px;min-width:0}
+.col h3{font-size:21px;display:flex;gap:8px;align-items:baseline}
+.col h3 .step{font-family:var(--body);font-size:12px;color:var(--muted)}
+.col .q{font-size:13px;color:var(--muted);margin:-4px 0 2px}
+.notes{display:flex;flex-direction:column;gap:8px;min-height:60px}
+.note{position:relative;background:var(--c);color:var(--note-ink);padding:10px 30px 10px 12px;border-radius:2px 2px 10px 2px;box-shadow:0 1px 2px rgba(0,0,0,.12);white-space:pre-wrap;word-break:break-word;transform:rotate(var(--r))}
+.note .x{position:absolute;top:4px;right:4px;border:0;background:transparent;color:inherit;opacity:.5;cursor:pointer;font-size:16px;line-height:1;padding:4px}
+.note .x:hover{opacity:1}
+.empty{font-size:13px;color:var(--muted);border:1px dashed var(--line);border-radius:6px;padding:10px;text-align:center}
+.add{display:flex;flex-direction:column;gap:6px}
+.add textarea{min-height:58px;resize:vertical;font-size:14px}
+.starter{display:flex;flex-wrap:wrap;gap:4px}
+.starter button{font:inherit;font-size:12px;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:99px;padding:2px 8px;cursor:pointer}
+.starter button:hover{color:var(--ink);border-color:var(--accent)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:6px;font-size:14px}
+.copybox{width:100%;min-height:160px;font-size:13px}
+@media (prefers-reduced-motion:reduce){.note{transform:none}}
+</style>
+
+<div class="wrap">
+  <aside class="rail">
+    <div class="brand">
+      <div class="eyebrow">IB PYP · 생각이 보이는 수업</div>
+      <h1>생각 루틴 보드</h1>
+      <p>루틴을 고르고 단계별로 생각을 붙여 보세요.</p>
+    </div>
+    <div class="routines" id="routines" role="group" aria-label="생각 루틴 선택"></div>
+    <div class="tip" id="tip"></div>
+  </aside>
+
+  <main>
+    <div class="head">
+      <div class="field"><label for="stim">탐구 자료·주제</label><input id="stim" placeholder="예: 가뭄으로 갈라진 논 사진"></div>
+      <div class="field small"><label for="who">이름</label><input id="who" placeholder="이름 또는 모둠"></div>
+      <div class="tools">
+        <button class="btn" id="clear" type="button">이 루틴 비우기</button>
+        <button class="btn primary" id="copy" type="button">텍스트로 복사</button>
+      </div>
+    </div>
+    <div id="confirm" hidden class="tip"><strong>이 루틴의 내용을 모두 지울까요?</strong>
+      <div class="tools" style="margin-top:6px"><button class="btn" id="yes" type="button">지우기</button><button class="btn" id="no" type="button">취소</button></div></div>
+
+    <section class="board" aria-live="polite">
+      <div class="board-title">
+        <h2 id="bt"></h2>
+        <span class="stim" id="bs"></span>
+      </div>
+      <div class="cols" id="cols"></div>
+    </section>
+    <textarea id="fallback" class="copybox" hidden readonly aria-label="복사할 텍스트"></textarea>
+  </main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const C=["var(--n1)","var(--n2)","var(--n3)","var(--n4)"];
+const R=[
+ {id:"stw",name:"보고·생각하고·궁금해하기",en:"See-Think-Wonder",
+  when:"사진, 그림, 영상, 실물을 처음 만날 때. 단원 도입의 호기심 열기에 좋아요.",
+  steps:[
+   {t:"보아요",q:"무엇이 보이나요? 해석 없이 있는 그대로.",s:["나는 ~이 보여요.","~ 색깔/모양이 있어요."]},
+   {t:"생각해요",q:"무슨 일이 일어나고 있다고 생각하나요? 왜요?",s:["~라고 생각해요. 왜냐하면","~인 것 같아요."]},
+   {t:"궁금해요",q:"더 알고 싶은 것은 무엇인가요?",s:["왜 ~일까?","만약 ~라면 어떻게 될까?"]}]},
+ {id:"tpe",name:"생각·퍼즐·탐색",en:"Think-Puzzle-Explore",
+  when:"새 탐구 단원을 시작할 때 사전 지식과 탐구 질문을 끌어내요.",
+  steps:[
+   {t:"알고 있어요",q:"이 주제에 대해 이미 알고 있다고 생각하는 것은?",s:["나는 ~을 알아요.","~라고 들었어요."]},
+   {t:"헷갈려요",q:"어떤 질문이나 수수께끼가 떠오르나요?",s:["~은 정말일까?","~이 잘 이해되지 않아요."]},
+   {t:"탐색할래요",q:"어떻게 알아볼 수 있을까요?",s:["~에게 물어볼래요.","~ 자료를 찾아볼래요."]}]},
+ {id:"b321",name:"3-2-1 다리 잇기",en:"3-2-1 Bridge",
+  when:"배우기 전과 후 생각의 변화를 확인할 때. 단원의 처음과 끝에 사용해요.",
+  steps:[
+   {t:"처음 생각",q:"떠오르는 낱말 3개, 질문 2개, 비유 1개",s:["낱말: ","질문: ","비유: ~은 ~와 같다."]},
+   {t:"새로운 생각",q:"배운 뒤 다시 낱말 3, 질문 2, 비유 1",s:["낱말: ","질문: ","비유: ~은 ~와 같다."]},
+   {t:"다리 잇기",q:"처음 생각과 새 생각은 어떻게 연결되나요?",s:["처음엔 ~였는데 지금은","~ 때문에 생각이 바뀌었어요."]}]},
+ {id:"cec",name:"연결·확장·도전",en:"Connect-Extend-Challenge",
+  when:"새 자료를 읽거나 들은 뒤, 이미 아는 것과 연결할 때.",
+  steps:[
+   {t:"연결해요",q:"이미 알던 것과 어떻게 연결되나요?",s:["~와 비슷해요.","전에 배운 ~이 떠올라요."]},
+   {t:"넓어졌어요",q:"생각이 어떤 새 방향으로 넓어졌나요?",s:["새롭게 ~을 알게 됐어요."]},
+   {t:"도전해요",q:"아직 어렵거나 의문이 드는 것은?",s:["~은 아직 잘 모르겠어요.","정말 ~일까요?"]}]},
+ {id:"csq",name:"주장·근거·질문",en:"Claim-Support-Question",
+  when:"토의·토론 전에 주장을 세우고 근거를 점검할 때.",
+  steps:[
+   {t:"주장",q:"이 주제에 대한 나의 주장은?",s:["나는 ~해야 한다고 생각해요."]},
+   {t:"근거",q:"주장을 뒷받침하는 근거는?",s:["왜냐하면 ~이기 때문이에요.","자료에 따르면 ~"]},
+   {t:"질문",q:"내 주장에 대해 생길 수 있는 질문이나 반론은?",s:["누군가는 ~라고 물을 수 있어요."]}]},
+ {id:"uti",name:"전에는·이제는",en:"I used to think… Now I think…",
+  when:"차시나 단원을 마무리하며 생각의 변화를 성찰할 때.",
+  steps:[
+   {t:"전에는",q:"이 주제에 대해 전에는 어떻게 생각했나요?",s:["전에는 ~라고 생각했어요."]},
+   {t:"이제는",q:"지금은 어떻게 생각하나요?",s:["이제는 ~라고 생각해요."]},
+   {t:"바뀐 까닭",q:"무엇 때문에 생각이 바뀌었나요?",s:["~ 활동을 하면서","친구의 ~ 말을 듣고"]}]}
+];
+const SAMPLE={stw:{stim:"가뭄으로 갈라진 논 사진",who:"예시",sample:true,notes:[
+ ["땅이 거북이 등처럼 갈라져 있어요.","풀이 누렇게 말라 있어요.","멀리 빈 저수지가 보여요."],
+ ["비가 오랫동안 오지 않은 것 같아요.","농사를 짓는 사람들이 걱정할 것 같아요."],
+ ["우리 지역에도 이런 일이 생길까?","물을 아끼려면 마을에서 무엇을 할 수 있을까?"]]}};
+const KEY="thinking-routine-board-v1";
+let store={};try{store=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){}
+for(const k in SAMPLE) if(!store[k]) store[k]=JSON.parse(JSON.stringify(SAMPLE[k]));
+let cur="stw";try{cur=localStorage.getItem(KEY+":cur")||"stw"}catch(e){}
+if(!R.find(r=>r.id===cur))cur="stw";
+const $=id=>document.getElementById(id);
+function save(){try{localStorage.setItem(KEY,JSON.stringify(store));localStorage.setItem(KEY+":cur",cur)}catch(e){}}
+function data(id){const r=R.find(x=>x.id===id);if(!store[id])store[id]={stim:"",who:"",notes:r.steps.map(()=>[])};return store[id]}
+function rot(i,j){return (((i*7+j*13)%5)-2)*0.6+"deg"}
+function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,1800)}
+
+function renderRail(){
+ $("routines").innerHTML=R.map(r=>`<button type="button" data-id="${r.id}" aria-pressed="${r.id===cur}"><b>${r.name}</b><span>${r.en}</span></button>`).join("");
+ const r=R.find(x=>x.id===cur);$("tip").innerHTML=`<strong>언제 쓰나요?</strong>${r.when}`;
+}
+function esc(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function renderBoard(){
+ const r=R.find(x=>x.id===cur),d=data(cur);
+ $("stim").value=d.stim||"";$("who").value=d.who||"";
+ $("bt").innerHTML=esc(r.name)+(d.sample?' <span class="badge">예시</span>':"");
+ $("bs").textContent=[d.stim,d.who].filter(Boolean).join(" · ");
+ $("cols").innerHTML=r.steps.map((s,i)=>`
+  <div class="col">
+   <h3>${s.t}<span class="step">${i+1}단계</span></h3>
+   <p class="q">${s.q}</p>
+   <div class="notes">${d.notes[i].length?d.notes[i].map((n,j)=>`<div class="note" style="--c:${C[i%4]};--r:${rot(i,j)}">${esc(n)}<button class="x" type="button" aria-label="삭제" data-i="${i}" data-j="${j}">×</button></div>`).join(""):'<div class="empty">아직 붙인 생각이 없어요</div>'}</div>
+   <div class="add">
+    <div class="starter">${s.s.map(x=>`<button type="button" data-i="${i}" data-s="${esc(x)}">${esc(x)}</button>`).join("")}</div>
+    <textarea id="in-${cur}-${i}" placeholder="생각을 쓰고 Enter (줄바꿈은 Shift+Enter)"></textarea>
+    <button class="btn" type="button" data-add="${i}">붙이기</button>
+   </div>
+  </div>`).join("");
+}
+function render(){renderRail();renderBoard();save()}
+function clearSample(d){if(d.sample){d.sample=false;if(d.who==="예시")d.who=""}}
+function add(i){const ta=$(`in-${cur}-${i}`),v=ta.value.trim();if(!v)return;const d=data(cur);clearSample(d);d.notes[i].push(v);renderBoard();save();$(`in-${cur}-${i}`).focus()}
+
+$("routines").onclick=e=>{const b=e.target.closest("button");if(!b)return;cur=b.dataset.id;$("confirm").hidden=true;render()};
+$("cols").addEventListener("click",e=>{
+ const t=e.target;
+ if(t.dataset.add!==undefined)add(+t.dataset.add);
+ else if(t.classList.contains("x")){const d=data(cur);d.notes[+t.dataset.i].splice(+t.dataset.j,1);renderBoard();save()}
+ else if(t.dataset.s!==undefined){const ta=$(`in-${cur}-${t.dataset.i}`);ta.value=t.dataset.s.replace(/~.*$/,"").trimEnd()+(t.dataset.s.includes("~")?" ":"");if(!t.dataset.s.includes("~"))ta.value=t.dataset.s;ta.focus()}
+});
+$("cols").addEventListener("keydown",e=>{if(e.target.tagName==="TEXTAREA"&&e.key==="Enter"&&!e.shiftKey&&!e.isComposing){e.preventDefault();add(+e.target.id.split("-").pop())}});
+$("stim").oninput=e=>{const d=data(cur);clearSample(d);d.stim=e.target.value;$("bs").textContent=[d.stim,d.who].filter(Boolean).join(" · ");save()};
+$("who").oninput=e=>{const d=data(cur);d.sample=false;d.who=e.target.value;$("bs").textContent=[d.stim,d.who].filter(Boolean).join(" · ");save()};
+$("clear").onclick=()=>{$("confirm").hidden=false};
+$("no").onclick=()=>{$("confirm").hidden=true};
+$("yes").onclick=()=>{const r=R.find(x=>x.id===cur);store[cur]={stim:"",who:"",notes:r.steps.map(()=>[])};$("confirm").hidden=true;render();toast("비웠어요")};
+$("copy").onclick=()=>{
+ const r=R.find(x=>x.id===cur),d=data(cur);
+ let t=`[${r.name}]`+(d.stim?` ${d.stim}`:"")+(d.who?` - ${d.who}`:"")+"\n";
+ r.steps.forEach((s,i)=>{t+=`\n■ ${s.t}\n`+(d.notes[i].length?d.notes[i].map(n=>"- "+n).join("\n"):"- (없음)")+"\n"});
+ const fb=$("fallback");
+ const done=()=>{fb.hidden=true;toast("복사했어요")};
+ const fail=()=>{fb.value=t;fb.hidden=false;fb.focus();fb.select();toast("아래 글을 직접 복사해 주세요")};
+ try{navigator.clipboard.writeText(t).then(done,fail)}catch(e){fail()}
+};
+render();
+</script>
+
+</body></html>
